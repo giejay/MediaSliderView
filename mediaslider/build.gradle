@@ -50,4 +50,5 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer-dash:1.2.1"
     implementation "androidx.media3:media3-ui:1.2.1"
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.viewpager2:viewpager2:1.0.0'
 }

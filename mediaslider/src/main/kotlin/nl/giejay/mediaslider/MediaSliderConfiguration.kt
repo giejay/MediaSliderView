@@ -12,6 +12,7 @@ class MediaSliderConfiguration : Parcelable {
     val interval: Int
     val isOnlyUseThumbnails: Boolean
     val isVideoSoundEnable: Boolean
+    val animationSpeedMillis: Int
 
     constructor(displayOptions: EnumSet<DisplayOptions>?,
                 startPosition: Int,
@@ -20,7 +21,8 @@ class MediaSliderConfiguration : Parcelable {
                 isVideoSoundEnable: Boolean,
                 assets: List<SliderItemViewHolder>,
                 loadMore: LoadMore?,
-                onAssetSelected: (SliderItemViewHolder) -> Unit = {}) {
+                onAssetSelected: (SliderItemViewHolder) -> Unit = {},
+                animationSpeedMillis: Int) {
         this.displayOptions = displayOptions
         this.startPosition = startPosition
         this.interval = interval
@@ -29,14 +31,16 @@ class MediaSliderConfiguration : Parcelable {
         Companion.loadMore = loadMore
         Companion.assets = assets
         Companion.onAssetSelected = onAssetSelected
+        this.animationSpeedMillis = animationSpeedMillis
     }
 
-    private constructor(`in`: Parcel) {
+    private constructor(`in`: Parcel, animationSpeedMillis: Int) {
         displayOptions = `in`.readSerializable() as EnumSet<DisplayOptions>?
         startPosition = `in`.readInt()
         interval = `in`.readInt()
         isOnlyUseThumbnails = `in`.readByte().toInt() != 0
         isVideoSoundEnable = `in`.readByte().toInt() != 0
+        this.animationSpeedMillis = animationSpeedMillis
     }
 
     val isClockVisible: Boolean
@@ -99,7 +103,7 @@ class MediaSliderConfiguration : Parcelable {
         val CREATOR: Parcelable.Creator<MediaSliderConfiguration> =
             object : Parcelable.Creator<MediaSliderConfiguration> {
                 override fun createFromParcel(`in`: Parcel): MediaSliderConfiguration {
-                    return MediaSliderConfiguration(`in`)
+                    return MediaSliderConfiguration(`in`, 0)
                 }
 
                 override fun newArray(size: Int): Array<MediaSliderConfiguration?> {

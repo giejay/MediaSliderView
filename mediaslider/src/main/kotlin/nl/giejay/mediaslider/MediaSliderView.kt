@@ -14,10 +14,12 @@ import android.widget.ImageButton
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -63,6 +65,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     /// internal
     private var currentPlayerInScope: ExoPlayer? = null
+    private var currentPlayerView: PlayerView? = null
     private var defaultExoFactory = DefaultHttpDataSource.Factory()
     private var slideShowPlaying = false
     private val goToNextAssetRunnable = Runnable { this.goToNextAsset() }
@@ -92,6 +95,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         mainHandler = Handler(Looper.getMainLooper())
     }
 
+    @OptIn(UnstableApi::class)
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (mPager.adapter == null) {
             return super.dispatchKeyEvent(event)
@@ -99,21 +103,15 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (context is MediaSliderListener && (context as MediaSliderListener).onButtonPressed(event)) {
                 return false
-            } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && config.items[mPager.currentItem].type == SliderItemType.IMAGE) {
-                toggleSlideshow(true)
-                return false
-            } else if (config.items[mPager.currentItem].type == SliderItemType.VIDEO) {
-                if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    Toast.makeText(context, "Enabling sound", Toast.LENGTH_SHORT).show()
-                    currentPlayerInScope?.volume = 1F
-                    config.isVideoSoundEnable = true
-                } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    Toast.makeText(context, "Disabling sound", Toast.LENGTH_SHORT).show()
-                    currentPlayerInScope?.volume = 0F
-                    config.isVideoSoundEnable = false
+            } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
+                if (currentItemType() == SliderItemType.IMAGE) {
+                    toggleSlideshow(true)
+                } else if (currentPlayerView != null) {
+                    currentPlayerView!!.showController()
+                    return super.dispatchKeyEvent(event)
                 }
-                return super.dispatchKeyEvent(event)
-            } else if (slideShowPlaying) {
+                return false
+            } else if (slideShowPlaying && currentItemType() == SliderItemType.VIDEO) {
                 if (event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
                     toggleSlideshow(true)
                 } else {
@@ -123,15 +121,24 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 // Go to next photo if dpad right is clicked or just stop
                 return super.dispatchKeyEvent(event)
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                goToNextAsset()
+                if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
+                    goToNextAsset()
+                }
                 return false
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                mPager.setCurrentItem((if (0 == mPager.currentItem) mPager.adapter!!.count else mPager.currentItem) - 1,
-                    config.enableSlideAnimation())
-                return false
+                if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
+                    goToPreviousAsset()
+                    return false
+                }
+                return super.dispatchKeyEvent(event)
             }
         }
-        return if (config.items[mPager.currentItem].type == SliderItemType.IMAGE) false else super.dispatchKeyEvent(event)
+        return if (currentItemType() == SliderItemType.IMAGE) false else super.dispatchKeyEvent(event)
+    }
+
+    private fun goToPreviousAsset() {
+        mPager.setCurrentItem((if (0 == mPager.currentItem) mPager.adapter!!.count else mPager.currentItem) - 1,
+            config.enableSlideAnimation())
     }
 
     fun loadMediaSliderView(config: MediaSliderConfiguration) {
@@ -174,7 +181,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         slideShowPlaying = !slideShowPlaying
         if (slideShowPlaying) {
             // do not start timers for videos, they will continue in the player listener
-            if (config.items[mPager.currentItem].type == SliderItemType.IMAGE) {
+            if (currentItemType() == SliderItemType.IMAGE) {
                 startTimerNextAsset()
             }
             if (context is Activity) {
@@ -219,8 +226,15 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         pagerAdapter = ScreenSlidePagerAdapter(
             context, config.items,
             defaultExoFactory,
-            config
-        ) { result, position -> transformResults[position] = result }
+            config,
+            { result, position -> transformResults[position] = result },
+            {
+                when (it) {
+                    R.id.exo_rewind -> goToPreviousAsset()
+                    R.id.exo_forward -> goToNextAsset()
+                }
+            }
+        )
 
         try {
             if (config.enableSlideAnimation() && config.animationSpeedMillis > 0) {
@@ -299,13 +313,16 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
                 if (sliderItem.type == SliderItemType.VIDEO) {
                     val viewTag = mPager.findViewWithTag<View>("view$i") ?: return
-                    val simpleExoPlayerView = viewTag.findViewById<PlayerView>(R.id.video_view)
-                    if (simpleExoPlayerView.player != null) {
-                        currentPlayerInScope = simpleExoPlayerView.player as ExoPlayer?
+                    currentPlayerView = viewTag.findViewById(R.id.video_view)
+                    if (currentPlayerView!!.player != null) {
+                        currentPlayerInScope = currentPlayerView!!.player as ExoPlayer?
                         currentPlayerInScope!!.seekTo(0, 0)
                         if (currentPlayerInScope!!.playbackState == Player.STATE_IDLE) {
                             prepareMedia(sliderItem.url,
                                 currentPlayerInScope!!, defaultExoFactory)
+                        }
+                        if(!config.isVideoSoundEnable){
+                            currentPlayerView!!.player!!.volume = 0f
                         }
                         currentPlayerInScope!!.addListener(listener)
                         currentPlayerInScope!!.playWhenReady = true
@@ -392,9 +409,16 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         }
         config.items = items
         pagerAdapter!!.setItems(items)
-        if (slideShowPlaying && config.items[mPager.currentItem].type == SliderItemType.IMAGE) {
+        if (slideShowPlaying && currentItemType() == SliderItemType.IMAGE) {
             startTimerNextAsset()
         }
+    }
+
+    private fun currentItemType(): SliderItemType? = config.items[mPager.currentItem].type
+
+    @OptIn(UnstableApi::class)
+    fun isControllerVisible(): Boolean {
+        return currentPlayerView?.isControllerFullyVisible == true
     }
 
     companion object {

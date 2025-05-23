@@ -29,10 +29,10 @@ class ScreenSlidePagerAdapter(private val context: Context,
                               private var items: List<SliderItemViewHolder>,
                               private val exoFactory: DefaultHttpDataSource.Factory,
                               private val config: MediaSliderConfiguration,
-                              private val transformResult: (String, Int) -> Unit) : PagerAdapter() {
+                              private val transformResult: (String, Int) -> Unit,
+                              private val buttonListener: (Int) -> Unit) : PagerAdapter() {
     private var imageView: TouchImageView? = null
     private val progressBars: MutableMap<Int, ProgressBar> = HashMap()
-    private var currentVolume = 0f
 
     fun setItems(items: List<SliderItemViewHolder>) {
         this.items = items
@@ -68,6 +68,7 @@ class ScreenSlidePagerAdapter(private val context: Context,
         } else if (model.type == SliderItemType.VIDEO) {
             view = inflater.inflate(R.layout.video_item, container, false)
             val playerView = view.findViewById<PlayerView>(R.id.video_view)
+            val playBtn = playerView.findViewById<ImageButton>(R.id.exo_pause)
             playerView.tag = "view$position"
             val player = ExoPlayer.Builder(context)
                 .setLoadControl(DefaultLoadControl.Builder()
@@ -76,13 +77,13 @@ class ScreenSlidePagerAdapter(private val context: Context,
                 ).build()
             prepareMedia(model.url, player, exoFactory)
             if (!config.isVideoSoundEnable) {
-                currentVolume = player.volume
                 player.volume = 0f
             }
+
             player.playWhenReady = false
             playerView.player = player
-            val playBtn = playerView.findViewById<ImageButton>(R.id.exo_pause)
             playBtn.setOnClickListener { v: View? ->
+                buttonListener.invoke(R.id.exo_pause)
                 //events on play buttons
                 if (player.isPlaying) {
                     player.pause()
@@ -93,6 +94,27 @@ class ScreenSlidePagerAdapter(private val context: Context,
                     player.play()
                 }
             }
+
+            val muteButton = playerView.findViewById<ImageButton>(R.id.exo_mute)
+            muteButton.setImageResource(if (player.volume > 0f) R.drawable.unmute_icon else R.drawable.mute_icon)
+            muteButton.setOnClickListener { _: View? ->
+                if (player.volume == 0f) {
+                    player.volume = 1f
+                    muteButton.setImageResource(R.drawable.unmute_icon)
+                    config.isVideoSoundEnable = true
+                } else {
+                    player.volume = 0f
+                    muteButton.setImageResource(R.drawable.mute_icon)
+                    config.isVideoSoundEnable = false
+                }
+            }
+            playerView.findViewById<ImageButton>(R.id.exo_forward).setOnClickListener { _ ->
+                buttonListener.invoke(R.id.exo_forward)
+            }
+            playerView.findViewById<ImageButton>(R.id.exo_rewind).setOnClickListener { _ ->
+                buttonListener.invoke(R.id.exo_rewind)
+            }
+
         }
         container.addView(view)
         return view!!
@@ -149,10 +171,6 @@ class ScreenSlidePagerAdapter(private val context: Context,
         val view = `object` as View
         val exoplayer = view.findViewById<PlayerView>(R.id.video_view)
         if (exoplayer != null && exoplayer.player != null) {
-            if (!config.isVideoSoundEnable) {
-                exoplayer.player!!.volume = currentVolume
-                currentVolume = 0f
-            }
             exoplayer.player!!.release()
         } else {
             val imageView = view.findViewById<View>(R.id.mBigImage)

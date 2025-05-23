@@ -19,7 +19,7 @@
     android:layout_height="wrap_content"
     android:layout_gravity="bottom"
     android:layoutDirection="ltr"
-    android:background="#CC000000"
+    android:background="#1A000000"
     android:orientation="vertical"
     tools:targetApi="28">
 
@@ -33,8 +33,23 @@
 <!--        <ImageButton android:id="@id/exo_play"-->
 <!--            style="@style/ExoMediaButton.Play"/>-->
 
-        <ImageButton android:id="@id/exo_pause"
+        <ImageButton android:id="@+id/exo_mute"
+            android:scaleType="fitCenter"
+            style="@style/ExoMediaButton.Play"
+            android:src="@drawable/mute_icon"
+            />
+
+        <ImageButton
+            android:id="@+id/exo_rewind"
+            style="@style/ExoMediaButton.Previous"/>
+
+        <ImageButton
+            android:id="@id/exo_pause"
             style="@style/ExoMediaButton.Pause"/>
+
+        <ImageButton
+            android:id="@+id/exo_forward"
+            style="@style/ExoMediaButton.Next"/>
 
     </LinearLayout>
 

@@ -111,7 +111,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                     return super.dispatchKeyEvent(event)
                 }
                 return false
-            } else if (slideShowPlaying && currentItemType() == SliderItemType.VIDEO) {
+            } else if (slideShowPlaying) {
                 if (event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
                     toggleSlideshow(true)
                 } else {
@@ -206,6 +206,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     private fun startTimerNextAsset() {
+        mainHandler.removeCallbacks(goToNextAssetRunnable)
         mainHandler.postDelayed(goToNextAssetRunnable, (config.interval * 1000).toLong())
     }
 

@@ -123,6 +123,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
                     goToNextAsset()
+                } else if(currentPlayerView?.isControllerFullyVisible == true){
+                    return super.dispatchKeyEvent(event)
                 }
                 return false
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {

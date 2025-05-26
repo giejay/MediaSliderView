@@ -1,0 +1,17 @@
+<RelativeLayout android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:elevation="10dp"
+        android:ellipsize="end"
+        android:fontFamily="@string/font_family"
+        android:gravity="bottom|right"
+        android:text="Hi!"
+        android:paddingLeft="100dp"
+        android:textColor="@color/details_text"
+        android:textSize="18sp" />
+</RelativeLayout>

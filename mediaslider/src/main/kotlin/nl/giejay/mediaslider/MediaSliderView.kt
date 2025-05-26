@@ -11,7 +11,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
-import android.widget.RelativeLayout
+import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -48,17 +48,17 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     private var playButton: View
     private var mainHandler: Handler
     private var mPager: ViewPager
-    private var sliderMediaNumber: TextView
-
-    private var subtitleLeft: TextView
-    private var subtitleRight: TextView
-    private var dateLeft: TextView
-    private var dateRight: TextView
-    private var titleLeft: TextView
-    private var titleRight: TextView
-    private var textViewDescriptions: List<TextView>
-
-    private var clock: TextView
+//    private var sliderMediaNumber: TextView
+//
+//    private var subtitleLeft: TextView
+//    private var subtitleRight: TextView
+//    private var dateLeft: TextView
+//    private var dateRight: TextView
+//    private var titleLeft: TextView
+//    private var titleRight: TextView
+//    private var textViewDescriptions: List<TextView>
+//
+//    private var clock: TextView
 
     // config
     private lateinit var config: MediaSliderConfiguration
@@ -77,18 +77,26 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     init {
         inflate(getContext(), R.layout.slider, this)
+        val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
+        listViewLeft.divider = null
+        listViewLeft.adapter = MetaDataAdapter(context, listOf(MetaDataItem("test!", R.layout.metadata_item_left), MetaDataItem("test 2!", R.layout.metadata_item_left)))
+
+        val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
+        listViewRight.divider = null
+        listViewRight.adapter = MetaDataAdapter(context, listOf(MetaDataItem("test 1!", R.layout.metadata_item_right), MetaDataItem("test 3!", R.layout.metadata_item_right)))
+
         playButton = findViewById(R.id.playPause)
         playButton.setOnClickListener { toggleSlideshow(true) }
-        clock = findViewById(R.id.clock)
-        titleRight = findViewById(R.id.title_right)
-        titleLeft = findViewById(R.id.title_left)
-        subtitleRight = findViewById(R.id.subtitle_right)
-        subtitleLeft = findViewById(R.id.subtitle_left)
-        dateRight = findViewById(R.id.date_right)
-        dateLeft = findViewById(R.id.date_left)
-        textViewDescriptions = listOf(titleRight, titleLeft, dateRight, dateLeft, subtitleRight, subtitleLeft)
+//        clock = findViewById(R.id.clock)
+//        titleRight = findViewById(R.id.title_right)
+//        titleLeft = findViewById(R.id.title_left)
+//        subtitleRight = findViewById(R.id.subtitle_right)
+//        subtitleLeft = findViewById(R.id.subtitle_left)
+//        dateRight = findViewById(R.id.date_right)
+//        dateLeft = findViewById(R.id.date_left)
+//        textViewDescriptions = listOf(titleRight, titleLeft, dateRight, dateLeft, subtitleRight, subtitleLeft)
 
-        sliderMediaNumber = findViewById(R.id.number)
+//        sliderMediaNumber = findViewById(R.id.number)
 //        val left = findViewById<ImageView>(R.id.left_arrow)
 //        val right = findViewById<ImageView>(R.id.right_arrow)
         mPager = findViewById(R.id.pager)
@@ -221,10 +229,10 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     private fun initViewsAndSetAdapter(listener: Player.Listener) {
-        val statusLayoutLeft = findViewById<RelativeLayout>(R.id.status_holder_left)
-        if (config.isGradiantOverlayVisible) {
-            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
-        }
+//        val statusLayoutLeft = findViewById<RelativeLayout>(R.id.status_holder_left)
+//        if (config.isGradiantOverlayVisible) {
+//            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
+//        }
 
         pagerAdapter = ScreenSlidePagerAdapter(
             context, config.items,
@@ -254,22 +262,22 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         mPager.setAdapter(pagerAdapter)
         setStartPosition()
         if (config.isClockVisible) {
-            clock.visibility = VISIBLE
+//            clock.visibility = VISIBLE
         }
         if (config.isTitleVisible) {
-            titleLeft.visibility = VISIBLE
-            titleRight.visibility = VISIBLE
+//            titleLeft.visibility = VISIBLE
+//            titleRight.visibility = VISIBLE
         }
         if (config.isSubtitleVisible) {
-            subtitleRight.visibility = VISIBLE
-            subtitleLeft.visibility = VISIBLE
+//            subtitleRight.visibility = VISIBLE
+//            subtitleLeft.visibility = VISIBLE
         }
         if (config.isDateVisible) {
-            dateRight.visibility = VISIBLE
-            dateLeft.visibility = VISIBLE
+//            dateRight.visibility = VISIBLE
+//            dateLeft.visibility = VISIBLE
         }
         if (config.isMediaCountVisible) {
-            sliderMediaNumber.visibility = VISIBLE
+//            sliderMediaNumber.visibility = VISIBLE
             updateMediaCount()
         }
 //        if (config.isNavigationVisible) {
@@ -339,7 +347,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             }
 
             override fun onPageSelected(i: Int) {
-                clearTextView(titleLeft, subtitleLeft, dateLeft)
+//                clearTextView(titleLeft, subtitleLeft, dateLeft)
             }
 
             override fun onPageScrollStateChanged(i: Int) {
@@ -348,14 +356,14 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     fun setItemText(sliderItem: SliderItemViewHolder) {
-        titleRight.text = sliderItem.descriptionRight
-        subtitleRight.text = sliderItem.subtitleRight
-        sliderItem.dateRight?.let { dateRight.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateRight)
+//        titleRight.text = sliderItem.descriptionRight
+//        subtitleRight.text = sliderItem.subtitleRight
+//        sliderItem.dateRight?.let { dateRight.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateRight)
 
         if (sliderItem.hasSecondaryItem()) {
-            titleLeft.text = sliderItem.descriptionLeft
-            subtitleLeft.text = sliderItem.subtitleLeft
-            sliderItem.dateLeft?.let { dateLeft.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateLeft)
+//            titleLeft.text = sliderItem.descriptionLeft
+//            subtitleLeft.text = sliderItem.subtitleLeft
+//            sliderItem.dateLeft?.let { dateLeft.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateLeft)
         }
     }
 
@@ -364,7 +372,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     private fun updateMediaCount() {
-        sliderMediaNumber.text = "${(mPager.currentItem + 1)}/${config.items.size}"
+//        sliderMediaNumber.text = "${(mPager.currentItem + 1)}/${config.items.size}"
     }
 
     fun onDestroy() {

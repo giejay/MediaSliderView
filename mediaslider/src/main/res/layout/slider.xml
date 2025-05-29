@@ -6,13 +6,13 @@
     android:layout_height="match_parent"
     android:background="@color/blackDark"
     android:theme="@style/AppTheme"
-    tools:context=".MediaSliderFragment">
+    tools:context="nl.giejay.mediaslider.view.MediaSliderFragment">
 
-    <RelativeLayout
-        android:id="@+id/status_holder_left"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:id="@+id/meta_data_holder"
+        android:layout_width="wrap_content"
         android:layout_height="250dp"
-        android:layout_weight="1"
+        android:baselineAligned="false"
         android:elevation="10dp"
         android:gravity="bottom|left"
         android:paddingBottom="30dp"
@@ -22,152 +22,18 @@
 
         <ListView
             android:id="@+id/metadata_view_left"
-            android:layout_width="300dp"
-            android:layout_height="wrap_content"
-            android:gravity="bottom|left">
-
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content">
         </ListView>
-        <TextView
-            android:id="@+id/title_left"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:elevation="10dp"
-            android:ellipsize="end"
-            android:fontFamily="@string/font_family"
-            android:gravity="bottom|left"
-            android:maxLines="2"
-            android:minLines="2"
-            android:paddingLeft="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="18sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/subtitle_left"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/title_left"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="left"
-            android:maxLines="1"
-            android:minLines="1"
-            android:paddingLeft="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="14sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/date_left"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/subtitle_left"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="left"
-            android:maxLines="1"
-            android:minLines="1"
-            android:paddingLeft="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="12sp"
-            android:visibility="gone" />
-
-    </RelativeLayout>
-
-    <RelativeLayout
-        android:id="@+id/status_holder_right"
-        android:layout_width="match_parent"
-        android:layout_height="250dp"
-        android:elevation="10dp"
-        android:gravity="bottom|right"
-        android:paddingBottom="30dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
 
         <ListView
             android:id="@+id/metadata_view_right"
-            android:layout_width="300dp"
-            android:layout_alignParentRight="true"
-            android:gravity="bottom|right"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content">
-
         </ListView>
-
-        <TextClock
-            android:id="@+id/clock"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="right"
-            android:paddingRight="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="48sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/title_right"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/clock"
-            android:elevation="10dp"
-            android:ellipsize="end"
-            android:fontFamily="@string/font_family"
-            android:gravity="bottom|right"
-            android:maxLines="2"
-            android:minLines="2"
-            android:paddingRight="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="18sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/subtitle_right"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/title_right"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="right"
-            android:maxLines="1"
-            android:minLines="1"
-            android:paddingRight="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="14sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/date_right"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/subtitle_right"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="right"
-            android:maxLines="1"
-            android:minLines="1"
-            android:paddingRight="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="12sp"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/number"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/date_right"
-            android:elevation="10dp"
-            android:fontFamily="@string/font_family"
-            android:gravity="right"
-            android:maxLines="1"
-            android:minLines="1"
-            android:paddingRight="100dp"
-            android:textColor="@color/details_text"
-            android:textSize="16sp"
-            android:visibility="gone" />
-    </RelativeLayout>
-
+    </LinearLayout>
 
     <androidx.viewpager.widget.ViewPager
         android:id="@+id/pager"

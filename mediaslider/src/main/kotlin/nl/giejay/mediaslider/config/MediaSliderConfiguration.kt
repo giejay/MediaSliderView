@@ -1,14 +1,17 @@
-package nl.giejay.mediaslider
+package nl.giejay.mediaslider.config
 
 import android.os.Parcel
 import android.os.Parcelable
-import com.zeuskartik.mediaslider.DisplayOptions
-import com.zeuskartik.mediaslider.SliderItemViewHolder
+import com.google.gson.reflect.TypeToken
+import nl.giejay.mediaslider.adapter.MetaDataItem
+import nl.giejay.mediaslider.adapter.MetaDataSerializer
+import nl.giejay.mediaslider.model.SliderItemViewHolder
 import nl.giejay.mediaslider.transformations.GlideTransformations
-import java.util.EnumSet
+import nl.giejay.mediaslider.util.LoadMore
+import java.lang.reflect.Type
+
 
 class MediaSliderConfiguration : Parcelable {
-    private val displayOptions: EnumSet<DisplayOptions>?
     val startPosition: Int
     val interval: Int
     val isOnlyUseThumbnails: Boolean
@@ -18,9 +21,11 @@ class MediaSliderConfiguration : Parcelable {
     val maxCutOffWidth: Int
     val glideTransformation: GlideTransformations
     val debugEnabled: Boolean
+    val metaDataConfig: List<MetaDataItem>
+    private val gradiantOverlay: Boolean
+    val enableSlideAnimation: Boolean
 
-    constructor(displayOptions: EnumSet<DisplayOptions>?,
-                startPosition: Int,
+    constructor(startPosition: Int,
                 interval: Int,
                 onlyUseThumbnails: Boolean,
                 isVideoSoundEnable: Boolean,
@@ -31,12 +36,15 @@ class MediaSliderConfiguration : Parcelable {
                 maxCutOffHeight: Int,
                 maxCutOffWidth: Int,
                 transformation: GlideTransformations,
-                debugEnabled: Boolean) {
-        this.displayOptions = displayOptions
+                debugEnabled: Boolean,
+                gradiantOverlay: Boolean,
+                enableSlideAnimation: Boolean,
+                metaDataConfig: List<MetaDataItem>) {
         this.startPosition = startPosition
         this.interval = interval
         this.isOnlyUseThumbnails = onlyUseThumbnails
         this.isVideoSoundEnable = isVideoSoundEnable
+        this.metaDataConfig = metaDataConfig
         Companion.loadMore = loadMore
         Companion.assets = assets
         Companion.onAssetSelected = onAssetSelected
@@ -45,42 +53,28 @@ class MediaSliderConfiguration : Parcelable {
         this.maxCutOffWidth = maxCutOffWidth
         this.glideTransformation = transformation
         this.debugEnabled = debugEnabled
+        this.gradiantOverlay = gradiantOverlay
+        this.enableSlideAnimation = enableSlideAnimation
     }
 
     private constructor(`in`: Parcel) {
-        displayOptions = `in`.readSerializable() as EnumSet<DisplayOptions>?
         startPosition = `in`.readInt()
         interval = `in`.readInt()
         isOnlyUseThumbnails = `in`.readByte().toInt() != 0
         isVideoSoundEnable = `in`.readByte().toInt() != 0
         this.animationSpeedMillis = `in`.readInt()
-        this.maxCutOffHeight =  `in`.readInt()
-        this.maxCutOffWidth =  `in`.readInt()
+        this.maxCutOffHeight = `in`.readInt()
+        this.maxCutOffWidth = `in`.readInt()
         this.glideTransformation = GlideTransformations.valueOfSafe(`in`.readString()!!, GlideTransformations.CENTER_INSIDE)
         this.debugEnabled = `in`.readInt() == 1
+        this.gradiantOverlay = `in`.readInt() == 1
+        this.enableSlideAnimation = `in`.readInt() == 1
+        val listType: Type = object : TypeToken<ArrayList<MetaDataItem?>?>() {}.type
+        metaDataConfig = gson.fromJson(`in`.readString(), listType)
     }
 
-    val isClockVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.CLOCK)
-
-    val isTitleVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.TITLE)
-
-    val isSubtitleVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.SUBTITLE)
-
-    val isDateVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.DATE)
-
-    val isMediaCountVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.MEDIA_COUNT)
-
     val isGradiantOverlayVisible: Boolean
-        get() = (isMediaCountVisible || isDateVisible || isClockVisible || isTitleVisible || isSubtitleVisible) && displayOptions!!.contains(
-            DisplayOptions.GRADIENT_OVERLAY)
-
-    val isNavigationVisible: Boolean
-        get() = displayOptions!!.contains(DisplayOptions.NAVIGATION)
+        get() = (metaDataConfig.isNotEmpty()) && this.gradiantOverlay
 
     var items: List<SliderItemViewHolder>
         get() = assets
@@ -94,16 +88,11 @@ class MediaSliderConfiguration : Parcelable {
     val onAssetSelected: (SliderItemViewHolder) -> Unit
         get() = Companion.onAssetSelected
 
-    fun enableSlideAnimation(): Boolean {
-        return displayOptions!!.contains(DisplayOptions.ANIMATE_ASST_SLIDE)
-    }
-
     override fun describeContents(): Int {
         return 0
     }
 
     override fun writeToParcel(dest: Parcel, flags: Int) {
-        dest.writeSerializable(displayOptions)
         dest.writeInt(startPosition)
         dest.writeInt(interval)
         dest.writeByte((if (isOnlyUseThumbnails) 1 else 0).toByte())
@@ -112,7 +101,11 @@ class MediaSliderConfiguration : Parcelable {
         dest.writeInt(maxCutOffHeight)
         dest.writeInt(maxCutOffWidth)
         dest.writeString(glideTransformation.toString())
-        dest.writeInt(if(debugEnabled) 1 else 0)
+        dest.writeInt(if (debugEnabled) 1 else 0)
+        dest.writeInt(if (gradiantOverlay) 1 else 0)
+        dest.writeInt(if (enableSlideAnimation) 1 else 0)
+        val listType: Type = object : TypeToken<ArrayList<MetaDataItem?>?>() {}.type
+        dest.writeString(gson.toJson(this.metaDataConfig, listType))
     }
 
     companion object {
@@ -120,6 +113,9 @@ class MediaSliderConfiguration : Parcelable {
         var assets: List<SliderItemViewHolder> = emptyList()
         var loadMore: LoadMore? = null
         var onAssetSelected: (SliderItemViewHolder) -> Unit = { _ -> }
+        val gson = com.google.gson.GsonBuilder()
+            .registerTypeAdapter(MetaDataItem::class.java, MetaDataSerializer())
+            .create()
 
         @JvmField
         val CREATOR: Parcelable.Creator<MediaSliderConfiguration> =

@@ -8,10 +8,11 @@
         android:layout_height="wrap_content"
         android:elevation="10dp"
         android:ellipsize="end"
+        android:text="Not set"
         android:fontFamily="@string/font_family"
-        android:gravity="bottom|right"
-        android:text="Hi!"
-        android:paddingLeft="100dp"
+        android:layout_alignParentRight="false"
+        android:paddingRight="30dp"
+        android:paddingLeft="30dp"
         android:textColor="@color/details_text"
         android:textSize="18sp" />
 </RelativeLayout>

@@ -1,4 +1,4 @@
-package nl.giejay.mediaslider
+package nl.giejay.mediaslider.adapter
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -18,11 +18,12 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.zeuskartik.mediaslider.R
-import com.zeuskartik.mediaslider.SliderItem
-import com.zeuskartik.mediaslider.SliderItemType
-import com.zeuskartik.mediaslider.SliderItemViewHolder
-import com.zeuskartik.mediaslider.TouchImageView
-import nl.giejay.mediaslider.MediaSliderView.Companion.prepareMedia
+import nl.giejay.mediaslider.model.SliderItem
+import nl.giejay.mediaslider.model.SliderItemType
+import nl.giejay.mediaslider.model.SliderItemViewHolder
+import nl.giejay.mediaslider.view.TouchImageView
+import nl.giejay.mediaslider.config.MediaSliderConfiguration
+import nl.giejay.mediaslider.view.MediaSliderView.Companion.prepareMedia
 import timber.log.Timber
 
 class ScreenSlidePagerAdapter(private val context: Context,
@@ -75,7 +76,7 @@ class ScreenSlidePagerAdapter(private val context: Context,
                     .setPrioritizeTimeOverSizeThresholds(false)
                     .build()
                 ).build()
-            prepareMedia(model.url, player, exoFactory)
+            model.url?.let { prepareMedia(it, player, exoFactory) }
             if (!config.isVideoSoundEnable) {
                 player.volume = 0f
             }

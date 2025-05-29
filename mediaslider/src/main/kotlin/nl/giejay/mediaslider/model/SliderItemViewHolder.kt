@@ -1,60 +1,19 @@
-package com.zeuskartik.mediaslider;
+package nl.giejay.mediaslider.model
 
-import androidx.annotation.Nullable;
+data class SliderItemViewHolder(val mainItem: SliderItem, val secondaryItem: SliderItem?) {
+    constructor(mainItem: SliderItem) : this(mainItem, null)
 
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-public record SliderItemViewHolder(SliderItem mainItem, @Nullable SliderItem secondaryItem) {
-
-    public SliderItemViewHolder(SliderItem mainItem) {
-        this(mainItem, null);
+    fun hasSecondaryItem(): Boolean {
+        return secondaryItem != null
     }
 
-    public boolean hasSecondaryItem(){
-        return secondaryItem != null;
-    }
+    val type: SliderItemType
+        get() = mainItem.type
 
-    public SliderItemType getType(){
-        return mainItem.getType();
-    }
+    val url: String?
+        get() = mainItem.url
 
-    public String getUrl(){
-        return mainItem().getUrl();
-    }
-
-    public String getDescriptionRight(){
-        return secondaryItem != null ? secondaryItem.getDescription() : mainItem.getDescription();
-    }
-
-    public String getDescriptionLeft(){
-        return mainItem.getDescription();
-    }
-
-    public String getSubtitleLeft(){
-        return mainItem().getSubtitle();
-    }
-
-    public String getSubtitleRight(){
-        return secondaryItem != null ? secondaryItem.getSubtitle() : mainItem().getSubtitle();
-    }
-
-    public Date getDateLeft(){
-        return mainItem.getDate();
-    }
-
-    public Date getDateRight(){
-        return secondaryItem != null ? secondaryItem.getDate() : mainItem.getDate();
-    }
-
-    public String getThumbnailUrl(){
-        return mainItem.getThumbnailUrl();
-    }
-
-    public List<String> ids(){
-        return Stream.of(mainItem.getId(), secondaryItem != null ? secondaryItem.getId() : null).filter(Objects::nonNull).collect(Collectors.toList());
+    fun ids(): List<String> {
+        return listOfNotNull(mainItem.id, secondaryItem?.id)
     }
 }

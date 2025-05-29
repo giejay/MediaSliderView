@@ -4,7 +4,7 @@ import android.content.Context
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.bitmap.CenterInside
-import nl.giejay.mediaslider.MediaSliderConfiguration
+import nl.giejay.mediaslider.config.MediaSliderConfiguration
 
 enum class GlideTransformations(val transform: (Context, MediaSliderConfiguration, (String) -> Unit) -> BitmapTransformation) {
     CENTER_CROP({ _, _, _ -> CenterCrop() }),

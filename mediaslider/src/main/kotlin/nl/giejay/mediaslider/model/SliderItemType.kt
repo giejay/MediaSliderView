@@ -1,5 +1,5 @@
-package com.zeuskartik.mediaslider;
+package nl.giejay.mediaslider.model
 
-public enum SliderItemType {
+enum class SliderItemType {
     IMAGE, VIDEO
 }

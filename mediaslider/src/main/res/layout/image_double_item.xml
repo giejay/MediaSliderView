@@ -5,7 +5,7 @@
     android:background="@color/blackDark"
     android:orientation="horizontal">
 
-    <com.zeuskartik.mediaslider.TouchImageView
+    <nl.giejay.mediaslider.view.TouchImageView
         android:id="@+id/left_image"
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -13,7 +13,7 @@
         android:scaleType="centerInside"
         android:src="@drawable/images" />
 
-    <com.zeuskartik.mediaslider.TouchImageView
+    <nl.giejay.mediaslider.view.TouchImageView
         android:id="@+id/right_image"
         android:layout_width="0dp"
         android:layout_height="match_parent"

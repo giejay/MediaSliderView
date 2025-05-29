@@ -1,4 +1,4 @@
-package nl.giejay.mediaslider
+package nl.giejay.mediaslider.util
 
 import android.view.KeyEvent
 

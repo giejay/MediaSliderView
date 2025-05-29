@@ -1,4 +1,4 @@
-package nl.giejay.mediaslider
+package nl.giejay.mediaslider.view
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -11,8 +11,8 @@ import android.view.View
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ListView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -28,19 +28,23 @@ import androidx.viewpager.widget.ViewPager
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import com.zeuskartik.mediaslider.R
-import com.zeuskartik.mediaslider.SliderItemType
-import com.zeuskartik.mediaslider.SliderItemViewHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import nl.giejay.mediaslider.adapter.AlignOption
+import nl.giejay.mediaslider.adapter.MetaDataAdapter
+import nl.giejay.mediaslider.adapter.MetaDataClock
+import nl.giejay.mediaslider.adapter.MetaDataMediaCount
+import nl.giejay.mediaslider.adapter.ScreenSlidePagerAdapter
+import nl.giejay.mediaslider.config.MediaSliderConfiguration
+import nl.giejay.mediaslider.model.SliderItemType
+import nl.giejay.mediaslider.model.SliderItemViewHolder
+import nl.giejay.mediaslider.util.FixedSpeedScroller
+import nl.giejay.mediaslider.util.MediaSliderListener
 import timber.log.Timber
 import java.lang.reflect.Field
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 
 class MediaSliderView(context: Context) : ConstraintLayout(context) {
@@ -62,6 +66,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     // config
     private lateinit var config: MediaSliderConfiguration
+    private lateinit var metaDataLeftAdapter: MetaDataAdapter
+    private lateinit var metaDataRightAdapter: MetaDataAdapter
 
     /// internal
     private var currentPlayerInScope: ExoPlayer? = null
@@ -77,13 +83,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     init {
         inflate(getContext(), R.layout.slider, this)
-        val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
-        listViewLeft.divider = null
-        listViewLeft.adapter = MetaDataAdapter(context, listOf(MetaDataItem("test!", R.layout.metadata_item_left), MetaDataItem("test 2!", R.layout.metadata_item_left)))
-
-        val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
-        listViewRight.divider = null
-        listViewRight.adapter = MetaDataAdapter(context, listOf(MetaDataItem("test 1!", R.layout.metadata_item_right), MetaDataItem("test 3!", R.layout.metadata_item_right)))
+//        val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
+//        listViewLeft.divider = null
+//        listViewLeft.adapter = MetaDataAdapter(context, config, listOf(MetaDataItem("test!", R.layout.metadata_item_left), MetaDataItem("test 2!", R.layout.metadata_item_left)))
 
         playButton = findViewById(R.id.playPause)
         playButton.setOnClickListener { toggleSlideshow(true) }
@@ -148,11 +150,23 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     private fun goToPreviousAsset() {
         mPager.setCurrentItem((if (0 == mPager.currentItem) mPager.adapter!!.count else mPager.currentItem) - 1,
-            config.enableSlideAnimation())
+            config.enableSlideAnimation)
     }
 
     fun loadMediaSliderView(config: MediaSliderConfiguration) {
         this.config = config
+
+        val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
+        metaDataRightAdapter = MetaDataAdapter(context, config.metaDataConfig.filter { it.align == AlignOption.RIGHT }, config.metaDataConfig.map { it.setAlignOption(align = AlignOption.RIGHT) })
+        listViewRight.divider = null
+        listViewRight.adapter = metaDataRightAdapter
+
+        val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
+        // dont show the clock/media count twice in portrait mode and force everything to be left aligned
+        metaDataLeftAdapter = MetaDataAdapter(context, config.metaDataConfig.filter { it.align == AlignOption.LEFT }, config.metaDataConfig.filterNot { it is MetaDataClock || it is  MetaDataMediaCount }.map { it.setAlignOption(align = AlignOption.LEFT) })
+        listViewLeft.divider = null
+        listViewLeft.adapter = metaDataLeftAdapter
+
         val listener: Player.Listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED && slideShowPlaying) {
@@ -222,17 +236,17 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     private fun goToNextAsset() {
         if (mPager.currentItem < mPager.adapter!!.count - 1) {
-            mPager.setCurrentItem(mPager.currentItem + 1, config.enableSlideAnimation())
+            mPager.setCurrentItem(mPager.currentItem + 1, config.enableSlideAnimation)
         } else {
-            mPager.setCurrentItem(0, config.enableSlideAnimation())
+            mPager.setCurrentItem(0, config.enableSlideAnimation)
         }
     }
 
     private fun initViewsAndSetAdapter(listener: Player.Listener) {
-//        val statusLayoutLeft = findViewById<RelativeLayout>(R.id.status_holder_left)
-//        if (config.isGradiantOverlayVisible) {
-//            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
-//        }
+        val statusLayoutLeft = findViewById<LinearLayout>(R.id.meta_data_holder)
+        if (config.isGradiantOverlayVisible) {
+            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
+        }
 
         pagerAdapter = ScreenSlidePagerAdapter(
             context, config.items,
@@ -248,7 +262,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         )
 
         try {
-            if (config.enableSlideAnimation() && config.animationSpeedMillis > 0) {
+            if (config.enableSlideAnimation && config.animationSpeedMillis > 0) {
                 val mScroller: Field = ViewPager::class.java.getDeclaredField("mScroller")
                 mScroller.isAccessible = true
                 val scroller = FixedSpeedScroller(mPager.context, DecelerateInterpolator(0.75F), config.animationSpeedMillis)
@@ -261,40 +275,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
         mPager.setAdapter(pagerAdapter)
         setStartPosition()
-        if (config.isClockVisible) {
-//            clock.visibility = VISIBLE
-        }
-        if (config.isTitleVisible) {
-//            titleLeft.visibility = VISIBLE
-//            titleRight.visibility = VISIBLE
-        }
-        if (config.isSubtitleVisible) {
-//            subtitleRight.visibility = VISIBLE
-//            subtitleLeft.visibility = VISIBLE
-        }
-        if (config.isDateVisible) {
-//            dateRight.visibility = VISIBLE
-//            dateLeft.visibility = VISIBLE
-        }
-        if (config.isMediaCountVisible) {
-//            sliderMediaNumber.visibility = VISIBLE
-            updateMediaCount()
-        }
-//        if (config.isNavigationVisible) {
-//            left.visibility = VISIBLE
-//            right.visibility = VISIBLE
-//            left.setOnClickListener {
-//                val i = mPager.currentItem
-//                mPager.setCurrentItem(i - 1)
-//                updateMediaCount()
-//            }
-//            right.setOnClickListener {
-//                val i = mPager.currentItem
-//                mPager.setCurrentItem(i + 1)
-//                updateMediaCount()
-//            }
-//        }
-
         mPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrolled(i: Int, v: Float, i1: Int) {
                 stopPlayer()
@@ -328,8 +308,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                     if (currentPlayerView!!.player != null) {
                         currentPlayerInScope = currentPlayerView!!.player as ExoPlayer?
                         currentPlayerInScope!!.seekTo(0, 0)
-                        if (currentPlayerInScope!!.playbackState == Player.STATE_IDLE) {
-                            prepareMedia(sliderItem.url,
+                        if (currentPlayerInScope!!.playbackState == Player.STATE_IDLE && sliderItem.url != null) {
+                            prepareMedia(sliderItem.url!!,
                                 currentPlayerInScope!!, defaultExoFactory)
                         }
                         if(!config.isVideoSoundEnable){
@@ -347,7 +327,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             }
 
             override fun onPageSelected(i: Int) {
-//                clearTextView(titleLeft, subtitleLeft, dateLeft)
+                clearTextView()
             }
 
             override fun onPageScrollStateChanged(i: Int) {
@@ -356,23 +336,21 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     fun setItemText(sliderItem: SliderItemViewHolder) {
-//        titleRight.text = sliderItem.descriptionRight
-//        subtitleRight.text = sliderItem.subtitleRight
-//        sliderItem.dateRight?.let { dateRight.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateRight)
-
-        if (sliderItem.hasSecondaryItem()) {
-//            titleLeft.text = sliderItem.descriptionLeft
-//            subtitleLeft.text = sliderItem.subtitleLeft
-//            sliderItem.dateLeft?.let { dateLeft.text = formatDate(it) } ?: clearTextView(this@MediaSliderView.dateLeft)
+        if(sliderItem.hasSecondaryItem()){
+            metaDataLeftAdapter.setItem(sliderItem.secondaryItem!!, true)
+            metaDataRightAdapter.setItem(sliderItem.mainItem, true)
+        } else {
+            metaDataRightAdapter.setItem(sliderItem.mainItem, false)
+            metaDataLeftAdapter.setItem(sliderItem.mainItem, false)
         }
     }
 
-    private fun clearTextView(vararg view: TextView) {
-        view.forEach { it.text = "" }
+    private fun clearTextView() {
+        metaDataLeftAdapter.clearItem()
     }
 
     private fun updateMediaCount() {
-//        sliderMediaNumber.text = "${(mPager.currentItem + 1)}/${config.items.size}"
+        metaDataRightAdapter.setMediaCount("${(mPager.currentItem + 1)}/${config.items.size}")
     }
 
     fun onDestroy() {
@@ -440,20 +418,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             val mediaSource = ProgressiveMediaSource.Factory(factory).createMediaSource(mediaItem)
             player.setMediaSource(mediaSource, 0L)
             player.prepare()
-        }
-
-        private fun formatDate(date: Date): String {
-            val calendar = Calendar.getInstance()
-            calendar.time = date
-            val locale = Locale.getDefault(Locale.Category.FORMAT)
-            val day = calendar[Calendar.DATE]
-            val formatString = when (day) {
-                1, 21, 31 -> "EEEE',' d'ˢᵗ' MMMM yyyy"
-                2, 22 -> "EEEE',' d'ⁿᵈ' MMMM yyyy"
-                3, 23 -> "EEEE',' d'ʳᵈ' MMMM yyyy"
-                else -> "EEEE',' d'ᵗʰ' MMMM yyyy"
-            }
-            return SimpleDateFormat(formatString, locale).format(date)
         }
     }
 }

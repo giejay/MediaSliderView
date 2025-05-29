@@ -115,7 +115,6 @@ class ScreenSlidePagerAdapter(private val context: Context,
             playerView.findViewById<ImageButton>(R.id.exo_rewind).setOnClickListener { _ ->
                 buttonListener.invoke(R.id.exo_rewind)
             }
-
         }
         container.addView(view)
         return view!!

@@ -117,10 +117,16 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 if (currentItemType() == SliderItemType.IMAGE) {
                     toggleSlideshow(true)
                 } else if (currentPlayerView != null) {
-                    currentPlayerView!!.showController()
                     return super.dispatchKeyEvent(event)
                 }
                 return false
+            } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentItemType() == SliderItemType.VIDEO && currentPlayerView != null) {
+                currentPlayerView!!.useController = true
+                currentPlayerView!!.showController()
+                return super.dispatchKeyEvent(event)
+            } else if (event.keyCode == KeyEvent.KEYCODE_BACK && currentItemType() == SliderItemType.VIDEO && currentPlayerView != null && currentPlayerView!!.isControllerFullyVisible) {
+                currentPlayerView!!.hideController()
+                return true
             } else if (slideShowPlaying) {
                 if (event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
                     toggleSlideshow(true)
@@ -133,7 +139,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
                     goToNextAsset()
-                } else if(currentPlayerView?.isControllerFullyVisible == true){
+                } else if (currentPlayerView?.isControllerFullyVisible == true) {
                     return super.dispatchKeyEvent(event)
                 }
                 return false
@@ -157,13 +163,17 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         this.config = config
 
         val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
-        metaDataRightAdapter = MetaDataAdapter(context, config.metaDataConfig.filter { it.align == AlignOption.RIGHT }, config.metaDataConfig.map { it.setAlignOption(align = AlignOption.RIGHT) })
+        metaDataRightAdapter = MetaDataAdapter(context,
+            config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
+            config.metaDataConfig.map { it.setAlignOption(align = AlignOption.RIGHT) })
         listViewRight.divider = null
         listViewRight.adapter = metaDataRightAdapter
 
         val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
         // dont show the clock/media count twice in portrait mode and force everything to be left aligned
-        metaDataLeftAdapter = MetaDataAdapter(context, config.metaDataConfig.filter { it.align == AlignOption.LEFT }, config.metaDataConfig.filterNot { it is MetaDataClock || it is  MetaDataMediaCount }.map { it.setAlignOption(align = AlignOption.LEFT) })
+        metaDataLeftAdapter = MetaDataAdapter(context,
+            config.metaDataConfig.filter { it.align == AlignOption.LEFT },
+            config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }.map { it.setAlignOption(align = AlignOption.LEFT) })
         listViewLeft.divider = null
         listViewLeft.adapter = metaDataLeftAdapter
 
@@ -312,9 +322,10 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                             prepareMedia(sliderItem.url!!,
                                 currentPlayerInScope!!, defaultExoFactory)
                         }
-                        if(!config.isVideoSoundEnable){
+                        if (!config.isVideoSoundEnable) {
                             currentPlayerView!!.player!!.volume = 0f
                         }
+                        currentPlayerView!!.useController = false
                         currentPlayerInScope!!.addListener(listener)
                         currentPlayerInScope!!.playWhenReady = true
                     }
@@ -336,7 +347,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     fun setItemText(sliderItem: SliderItemViewHolder) {
-        if(sliderItem.hasSecondaryItem()){
+        if (sliderItem.hasSecondaryItem()) {
             metaDataLeftAdapter.setItem(sliderItem.secondaryItem!!, true)
             metaDataRightAdapter.setItem(sliderItem.mainItem, true)
         } else {

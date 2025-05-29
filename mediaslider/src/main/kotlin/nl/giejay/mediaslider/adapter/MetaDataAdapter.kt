@@ -8,36 +8,31 @@ import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.RelativeLayout
 import android.widget.TextView
-import nl.giejay.mediaslider.model.MetaDataType
 import com.zeuskartik.mediaslider.R
-import kotlinx.serialization.Serializable
+import nl.giejay.mediaslider.model.MetaDataType
 import nl.giejay.mediaslider.model.SliderItem
 
 enum class AlignOption {
     LEFT, RIGHT
 }
 
-@Serializable
 sealed class MetaDataItem{
     abstract val align: AlignOption
     abstract fun setAlignOption(align: AlignOption): MetaDataItem
 }
 
-@Serializable
 data class MetaDataClock(override val align: AlignOption): MetaDataItem() {
     override fun setAlignOption(align: AlignOption): MetaDataItem {
         return copy(align = align)
     }
 }
 
-@Serializable
 data class MetaDataMediaCount(override val align: AlignOption): MetaDataItem() {
     override fun setAlignOption(align: AlignOption): MetaDataItem {
         return copy(align = align)
     }
 }
 
-@Serializable
 data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align: AlignOption):MetaDataItem() {
     fun setView(view: TextView, item: SliderItem) {
         view.text = item.get(metaDataType)

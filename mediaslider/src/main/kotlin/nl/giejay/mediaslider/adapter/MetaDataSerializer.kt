@@ -8,22 +8,20 @@ import com.google.gson.JsonSerializer
 import nl.giejay.mediaslider.model.MetaDataType
 import java.lang.reflect.Type
 
-class MetaDataSerializer: JsonSerializer<MetaDataItem>, JsonDeserializer<MetaDataItem> {
+class MetaDataSerializer : JsonSerializer<MetaDataItem>, JsonDeserializer<MetaDataItem> {
     override fun serialize(src: MetaDataItem?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
         val jsonElement = context!!.serialize(src)
-        jsonElement.asJsonObject.addProperty("type", src!!::class.simpleName)
+        jsonElement.asJsonObject.addProperty("type", src!!.type.toString())
         return jsonElement
     }
 
     override fun deserialize(json: JsonElement?, typeOfT: Type?, context: JsonDeserializationContext?): MetaDataItem {
         val asJsonObject = json!!.asJsonObject
         val align = AlignOption.valueOf(asJsonObject.get("align").asString)
-        return when(asJsonObject.get("type").asString){
-            MetaDataMediaCount::class.simpleName -> MetaDataMediaCount(align)
-            MetaDataSliderItem::class.simpleName -> {
-                MetaDataSliderItem(MetaDataType.valueOf(asJsonObject.get("metaDataType").asString), align)
-            }
-            else -> MetaDataClock(align)
+        return when (val type = asJsonObject.get("type").asString) {
+            MetaDataType.MEDIA_COUNT.toString() -> MetaDataMediaCount(align)
+            MetaDataType.CLOCK.toString() -> MetaDataClock(align)
+            else -> MetaDataSliderItem(MetaDataType.valueOf(type), align)
         }
     }
 }

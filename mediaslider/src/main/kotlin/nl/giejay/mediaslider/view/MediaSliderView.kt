@@ -165,7 +165,10 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
         metaDataRightAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
-            config.metaDataConfig.map { it.setAlignOption(align = AlignOption.RIGHT) })
+            config.metaDataConfig.map { it.createCopy(align = AlignOption.RIGHT, type = it.type) },
+            { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+            { currentItem().mainItem },
+            { currentItem().hasSecondaryItem() })
         listViewRight.divider = null
         listViewRight.adapter = metaDataRightAdapter
 
@@ -173,7 +176,11 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         // dont show the clock/media count twice in portrait mode and force everything to be left aligned
         metaDataLeftAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.LEFT },
-            config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }.map { it.setAlignOption(align = AlignOption.LEFT) })
+            config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
+                .map { it.createCopy(align = AlignOption.LEFT, type = it.type) },
+            { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+            { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
+            { currentItem().hasSecondaryItem() })
         listViewLeft.divider = null
         listViewLeft.adapter = metaDataLeftAdapter
 
@@ -293,8 +300,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 }
                 val sliderItem = config.items[i]
                 config.onAssetSelected(sliderItem)
-                setItemText(sliderItem)
-                updateMediaCount()
+                metaDataRightAdapter.notifyDataSetChanged()
+                metaDataLeftAdapter.notifyDataSetChanged()
                 currentToast?.cancel()
                 if (!sliderItem.hasSecondaryItem() && config.debugEnabled && transformResults.contains(i)) {
                     currentToast = Toast.makeText(context, transformResults[i], Toast.LENGTH_LONG)
@@ -338,30 +345,13 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             }
 
             override fun onPageSelected(i: Int) {
-                clearTextView()
+                metaDataRightAdapter.notifyDataSetChanged()
+                metaDataLeftAdapter.notifyDataSetChanged()
             }
 
             override fun onPageScrollStateChanged(i: Int) {
             }
         })
-    }
-
-    fun setItemText(sliderItem: SliderItemViewHolder) {
-        if (sliderItem.hasSecondaryItem()) {
-            metaDataLeftAdapter.setItem(sliderItem.secondaryItem!!, true)
-            metaDataRightAdapter.setItem(sliderItem.mainItem, true)
-        } else {
-            metaDataRightAdapter.setItem(sliderItem.mainItem, false)
-            metaDataLeftAdapter.setItem(sliderItem.mainItem, false)
-        }
-    }
-
-    private fun clearTextView() {
-        metaDataLeftAdapter.clearItem()
-    }
-
-    private fun updateMediaCount() {
-        metaDataRightAdapter.setMediaCount("${(mPager.currentItem + 1)}/${config.items.size}")
     }
 
     fun onDestroy() {
@@ -414,7 +404,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         }
     }
 
-    private fun currentItemType(): SliderItemType? = config.items[mPager.currentItem].type
+    private fun currentItem(): SliderItemViewHolder = config.items[mPager.currentItem]
+    private fun currentItemType(): SliderItemType = config.items[mPager.currentItem].type
 
     @OptIn(UnstableApi::class)
     fun isControllerVisible(): Boolean {

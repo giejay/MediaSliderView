@@ -260,11 +260,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     }
 
     private fun initViewsAndSetAdapter(listener: Player.Listener) {
-        val statusLayoutLeft = findViewById<LinearLayout>(R.id.meta_data_holder)
-        if (config.isGradiantOverlayVisible) {
-            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
-        }
-
         pagerAdapter = ScreenSlidePagerAdapter(
             context, config.items,
             defaultExoFactory,
@@ -319,7 +314,11 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                     }
                 }
 
+                val statusLayoutLeft = findViewById<LinearLayout>(R.id.meta_data_holder)
                 if (sliderItem.type == SliderItemType.VIDEO) {
+                    if (config.isGradiantOverlayVisible) {
+                        statusLayoutLeft.background = null
+                    }
                     val viewTag = mPager.findViewWithTag<View>("view$i") ?: return
                     currentPlayerView = viewTag.findViewById(R.id.video_view)
                     if (currentPlayerView!!.player != null) {
@@ -337,6 +336,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         currentPlayerInScope!!.playWhenReady = true
                     }
                 } else {
+                    if (config.isGradiantOverlayVisible) {
+                        statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
+                    }
                     if (slideShowPlaying) {
                         startTimerNextAsset()
                     }

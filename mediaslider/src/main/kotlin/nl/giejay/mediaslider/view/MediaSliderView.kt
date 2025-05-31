@@ -165,7 +165,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
         metaDataRightAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
-            config.metaDataConfig.map { it.createCopy(align = AlignOption.RIGHT, type = it.type) },
+            config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
             { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
             { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
@@ -177,7 +177,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         metaDataLeftAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.LEFT },
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
-                .map { it.createCopy(align = AlignOption.LEFT, type = it.type) },
+                .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
             { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
             { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
@@ -331,7 +331,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         if (!config.isVideoSoundEnable) {
                             currentPlayerView!!.player!!.volume = 0f
                         }
-                        currentPlayerView!!.useController = false
                         currentPlayerInScope!!.addListener(listener)
                         currentPlayerInScope!!.playWhenReady = true
                     }

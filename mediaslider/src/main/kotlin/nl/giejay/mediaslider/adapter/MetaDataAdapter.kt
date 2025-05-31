@@ -10,9 +10,9 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import com.google.gson.JsonObject
 import com.zeuskartik.mediaslider.R
-import nl.giejay.mediaslider.config.MediaSliderConfiguration.Companion.gson
 import nl.giejay.mediaslider.model.MetaDataType
 import nl.giejay.mediaslider.model.SliderItem
+import nl.giejay.mediaslider.util.MetaDataConverter
 
 enum class AlignOption {
     LEFT, RIGHT
@@ -21,16 +21,22 @@ enum class AlignOption {
 sealed class MetaDataItem(val type: MetaDataType) {
     val textViewResourceId: Int = R.id.textView
     abstract val align: AlignOption
-    fun createCopy(type: MetaDataType, align: AlignOption): MetaDataItem{
-        // being able to change from a metadataclock to a mediacount or slideritem
-        val obj = JsonObject()
-        obj.addProperty("type", type.toString())
-        obj.addProperty("align", align.toString())
-        return gson.fromJson(obj, MetaDataItem::class.java)
-    }
     abstract fun createView(layoutInflater: LayoutInflater): View
     abstract fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int)
     abstract fun hasData(sliderItem: SliderItem): Boolean
+    fun withAlign(align: AlignOption): MetaDataItem {
+        return create(type, align)
+    }
+
+    companion object{
+        fun create(type: MetaDataType, align: AlignOption): MetaDataItem{
+            // being able to change from a metadataclock to a mediacount or slideritem in metadata customizer
+            val obj = JsonObject()
+            obj.addProperty("type", type.toString())
+            obj.addProperty("align", align.toString())
+            return MetaDataConverter.metaDataFromJsonObject(obj)
+        }
+    }
 }
 
 data class MetaDataClock(override val align: AlignOption) : MetaDataItem(MetaDataType.CLOCK) {

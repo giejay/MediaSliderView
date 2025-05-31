@@ -4,10 +4,10 @@ import android.os.Parcel
 import android.os.Parcelable
 import com.google.gson.reflect.TypeToken
 import nl.giejay.mediaslider.adapter.MetaDataItem
-import nl.giejay.mediaslider.adapter.MetaDataSerializer
 import nl.giejay.mediaslider.model.SliderItemViewHolder
 import nl.giejay.mediaslider.transformations.GlideTransformations
 import nl.giejay.mediaslider.util.LoadMore
+import nl.giejay.mediaslider.util.MetaDataConverter
 import java.lang.reflect.Type
 
 
@@ -69,8 +69,7 @@ class MediaSliderConfiguration : Parcelable {
         this.debugEnabled = `in`.readInt() == 1
         this.gradiantOverlay = `in`.readInt() == 1
         this.enableSlideAnimation = `in`.readInt() == 1
-        val listType: Type = object : TypeToken<ArrayList<MetaDataItem?>?>() {}.type
-        metaDataConfig = gson.fromJson(`in`.readString(), listType)
+        metaDataConfig = MetaDataConverter.metaDataListFromJson(`in`.readString()!!)
     }
 
     val isGradiantOverlayVisible: Boolean
@@ -104,8 +103,7 @@ class MediaSliderConfiguration : Parcelable {
         dest.writeInt(if (debugEnabled) 1 else 0)
         dest.writeInt(if (gradiantOverlay) 1 else 0)
         dest.writeInt(if (enableSlideAnimation) 1 else 0)
-        val listType: Type = object : TypeToken<ArrayList<MetaDataItem?>?>() {}.type
-        dest.writeString(gson.toJson(this.metaDataConfig, listType))
+        dest.writeString(MetaDataConverter.metaDataListToJson(metaDataConfig))
     }
 
     companion object {
@@ -113,9 +111,6 @@ class MediaSliderConfiguration : Parcelable {
         var assets: List<SliderItemViewHolder> = emptyList()
         var loadMore: LoadMore? = null
         var onAssetSelected: (SliderItemViewHolder) -> Unit = { _ -> }
-        val gson = com.google.gson.GsonBuilder()
-            .registerTypeAdapter(MetaDataItem::class.java, MetaDataSerializer())
-            .create()
 
         @JvmField
         val CREATOR: Parcelable.Creator<MediaSliderConfiguration> =

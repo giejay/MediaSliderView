@@ -11,7 +11,7 @@
     <LinearLayout
         android:id="@+id/meta_data_holder"
         android:layout_width="wrap_content"
-        android:layout_height="250dp"
+        android:layout_height="wrap_content"
         android:baselineAligned="false"
         android:elevation="10dp"
         android:gravity="bottom|left"

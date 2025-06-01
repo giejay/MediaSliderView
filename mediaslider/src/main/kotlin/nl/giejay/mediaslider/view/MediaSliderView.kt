@@ -110,24 +110,25 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         if (mPager.adapter == null) {
             return super.dispatchKeyEvent(event)
         }
+        val itemType = currentItemType()
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (context is MediaSliderListener && (context as MediaSliderListener).onButtonPressed(event)) {
                 return false
             } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
-                if (currentItemType() == SliderItemType.IMAGE) {
+                if (itemType == SliderItemType.IMAGE) {
                     toggleSlideshow(true)
                 } else if (currentPlayerView != null) {
                     return super.dispatchKeyEvent(event)
                 }
                 return false
-            } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentItemType() == SliderItemType.VIDEO && currentPlayerView != null) {
+            } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && itemType == SliderItemType.VIDEO && currentPlayerView != null) {
                 currentPlayerView!!.useController = true
                 currentPlayerView!!.showController()
                 return super.dispatchKeyEvent(event)
-            } else if (event.keyCode == KeyEvent.KEYCODE_BACK && currentItemType() == SliderItemType.VIDEO && currentPlayerView != null && currentPlayerView!!.isControllerFullyVisible) {
+            } else if (event.keyCode == KeyEvent.KEYCODE_BACK && itemType == SliderItemType.VIDEO && currentPlayerView != null && currentPlayerView!!.isControllerFullyVisible) {
                 currentPlayerView!!.hideController()
                 return true
-            } else if (slideShowPlaying) {
+            } else if (slideShowPlaying && itemType == SliderItemType.IMAGE) {
                 if (event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
                     toggleSlideshow(true)
                 } else {
@@ -137,21 +138,21 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 // Go to next photo if dpad right is clicked or just stop
                 return super.dispatchKeyEvent(event)
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
+                if (itemType == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
                     goToNextAsset()
                 } else if (currentPlayerView?.isControllerFullyVisible == true) {
                     return super.dispatchKeyEvent(event)
                 }
                 return false
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                if (currentItemType() == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
+                if (itemType == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
                     goToPreviousAsset()
                     return false
                 }
                 return super.dispatchKeyEvent(event)
             }
         }
-        return if (currentItemType() == SliderItemType.IMAGE) false else super.dispatchKeyEvent(event)
+        return if (itemType == SliderItemType.IMAGE) false else super.dispatchKeyEvent(event)
     }
 
     private fun goToPreviousAsset() {

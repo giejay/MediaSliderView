@@ -21,25 +21,35 @@ enum class AlignOption {
 sealed class MetaDataItem(val type: MetaDataType) {
     val textViewResourceId: Int = R.id.textView
     abstract val align: AlignOption
+    abstract val fontSize: Int
+    abstract val padding: Int
     abstract fun createView(layoutInflater: LayoutInflater): View
     abstract fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int)
     abstract fun hasData(sliderItem: SliderItem): Boolean
     fun withAlign(align: AlignOption): MetaDataItem {
-        return create(type, align)
+        return create(type, align, padding, fontSize)
     }
 
-    companion object{
-        fun create(type: MetaDataType, align: AlignOption): MetaDataItem{
+    abstract fun getTitle(): String
+
+    companion object {
+        const val DEFAULT_PADDING = 0
+        fun create(type: MetaDataType, align: AlignOption, padding: Int, fontSize: Int): MetaDataItem {
             // being able to change from a metadataclock to a mediacount or slideritem in metadata customizer
             val obj = JsonObject()
             obj.addProperty("type", type.toString())
             obj.addProperty("align", align.toString())
+            obj.addProperty("padding", padding)
+            obj.addProperty("fontSize", fontSize)
             return MetaDataConverter.metaDataFromJsonObject(obj)
         }
     }
 }
 
-data class MetaDataClock(override val align: AlignOption) : MetaDataItem(MetaDataType.CLOCK) {
+data class MetaDataClock(override val align: AlignOption,
+                         override val fontSize: Int = MetaDataType.CLOCK.defaultFontSize,
+                         override val padding: Int = DEFAULT_PADDING) : MetaDataItem(MetaDataType.CLOCK) {
+
     override fun createView(layoutInflater: LayoutInflater): View {
         return layoutInflater.inflate(R.layout.metadata_item_clock, null)
     }
@@ -52,9 +62,14 @@ data class MetaDataClock(override val align: AlignOption) : MetaDataItem(MetaDat
         return true
     }
 
+    override fun getTitle(): String {
+        return "Clock"
+    }
 }
 
-data class MetaDataMediaCount(override val align: AlignOption) : MetaDataItem(MetaDataType.MEDIA_COUNT) {
+data class MetaDataMediaCount(override val align: AlignOption,
+                              override val fontSize: Int = MetaDataType.MEDIA_COUNT.defaultFontSize,
+                              override val padding: Int = DEFAULT_PADDING) : MetaDataItem(MetaDataType.MEDIA_COUNT) {
     override fun createView(layoutInflater: LayoutInflater): View {
         return layoutInflater.inflate(R.layout.metadata_item, null)
     }
@@ -66,9 +81,15 @@ data class MetaDataMediaCount(override val align: AlignOption) : MetaDataItem(Me
     override fun hasData(sliderItem: SliderItem): Boolean {
         return true
     }
+
+    override fun getTitle(): String {
+        return "Media Count"
+    }
 }
 
-data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align: AlignOption) : MetaDataItem(metaDataType) {
+data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align: AlignOption,
+                              override val fontSize: Int = metaDataType.defaultFontSize,
+                              override val padding: Int = DEFAULT_PADDING) : MetaDataItem(metaDataType) {
 
     override fun createView(layoutInflater: LayoutInflater): View {
         return layoutInflater.inflate(R.layout.metadata_item, null)
@@ -80,6 +101,12 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
 
     override fun hasData(sliderItem: SliderItem): Boolean {
         return sliderItem.get(metaDataType)?.isNotBlank() == true
+    }
+
+    override fun getTitle(): String {
+        return if (metaDataType == MetaDataType.ALBUM_NAME) {
+            "Album Name"
+        } else metaDataType.toString().lowercase().capitalize()
     }
 }
 
@@ -126,6 +153,8 @@ class MetaDataAdapter(val context: Context,
             params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
             view.layoutParams = params
         }
+        textView.textSize = item.fontSize.toFloat()
+        textView.setPadding(textView.paddingLeft, item.padding, textView.paddingRight, item.padding)
         updateItem.invoke(item, getCurrentItem(), textView)
         return view
     }

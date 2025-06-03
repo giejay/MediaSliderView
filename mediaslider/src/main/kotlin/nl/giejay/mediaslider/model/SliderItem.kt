@@ -35,8 +35,6 @@ class SliderItem : Parcelable {
         return this.metaData[metaData]
     }
 
-
-
     override fun describeContents(): Int {
         return 0
     }

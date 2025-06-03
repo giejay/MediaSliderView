@@ -104,9 +104,7 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
     }
 
     override fun getTitle(): String {
-        return if (metaDataType == MetaDataType.ALBUM_NAME) {
-            "Album Name"
-        } else metaDataType.toString().lowercase().capitalize()
+        return metaDataType.title
     }
 }
 

@@ -8,4 +8,7 @@ enum class MetaDataType(val title: String, val defaultFontSize: Int) {
     CITY("City", 18),
     ALBUM_NAME("Album Name", 18),
     DATE("Date", 18)
+    // add camera (make + model in exifInfo)
+    // add originalPath
+    // add originalFileName
 }

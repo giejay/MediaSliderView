@@ -135,8 +135,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 } else {
                     // remove all current callbacks to prevent multiple runnables
                     mainHandler.removeCallbacks(goToNextAssetRunnable)
+                    goToNextAsset()
+                    return false
                 }
-                // Go to next photo if dpad right is clicked or just stop
                 return super.dispatchKeyEvent(event)
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if (itemType == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {

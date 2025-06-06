@@ -39,6 +39,7 @@ import nl.giejay.mediaslider.adapter.MetaDataClock
 import nl.giejay.mediaslider.adapter.MetaDataMediaCount
 import nl.giejay.mediaslider.adapter.ScreenSlidePagerAdapter
 import nl.giejay.mediaslider.config.MediaSliderConfiguration
+import nl.giejay.mediaslider.model.MetaDataType
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
 import nl.giejay.mediaslider.util.FixedSpeedScroller
@@ -167,20 +168,24 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         metaDataRightAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
             config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
-            { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
-            { currentItem().mainItem },
+            { metaData, sliderItem, textView ->
+                Timber.e("Updating item for right adapter: " + sliderItem.get(MetaDataType.DATE))
+                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+            { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewRight.divider = null
         listViewRight.adapter = metaDataRightAdapter
 
         val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
-        // dont show the clock/media count twice in portrait mode and force everything to be left aligned
         metaDataLeftAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.LEFT },
+            // dont show the clock/media count twice in portrait mode and force everything to be left aligned
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
                 .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
-            { metaData, sliderItem, textView -> metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
-            { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
+            { metaData, sliderItem, textView ->
+                Timber.e("Updating item for left adapter: " + sliderItem.get(MetaDataType.DATE))
+                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+            { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewLeft.divider = null
         listViewLeft.adapter = metaDataLeftAdapter

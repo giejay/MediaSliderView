@@ -115,6 +115,7 @@ class MetaDataAdapter(val context: Context,
                       private val getCurrentItem: () -> SliderItem,
                       private val portraitMode: () -> Boolean) : BaseAdapter() {
     private val layoutInflater: LayoutInflater = LayoutInflater.from(context)
+    private val viewsPerType: MutableMap<MetaDataType, View> = mutableMapOf()
 
     override fun getCount(): Int {
         return getFilteredMetaData().size
@@ -129,7 +130,7 @@ class MetaDataAdapter(val context: Context,
     }
 
     override fun getItemId(p0: Int): Long {
-        return 0
+        return getFilteredMetaData()[p0].type.ordinal.toLong()
     }
 
     override fun isEnabled(position: Int): Boolean {
@@ -142,8 +143,8 @@ class MetaDataAdapter(val context: Context,
 
     override fun getView(p0: Int, p1: View?, p2: ViewGroup?): View {
         val item = getItem(p0) as MetaDataItem
-        // todo use p1
-        val view = item.createView(layoutInflater)
+        // can't use p1 because the list might differ for every photo/adapter
+        val view = viewsPerType.getOrPut(item.type) { item.createView(layoutInflater) }
         val textView = view.findViewById<TextView>(item.textViewResourceId)
         if (item.align == AlignOption.RIGHT) {
             val params = textView.layoutParams as RelativeLayout.LayoutParams

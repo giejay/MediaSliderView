@@ -170,7 +170,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
             config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
             { metaData, sliderItem, textView ->
-                Timber.e("Updating item for right adapter: " + sliderItem.get(MetaDataType.DATE))
                 metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
             { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
@@ -184,7 +183,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
                 .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
             { metaData, sliderItem, textView ->
-                Timber.e("Updating item for left adapter: " + sliderItem.get(MetaDataType.DATE))
                 metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
             { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })

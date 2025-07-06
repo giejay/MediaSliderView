@@ -18,6 +18,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.zeuskartik.mediaslider.R
+import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
@@ -71,7 +72,9 @@ class ScreenSlidePagerAdapter(private val context: Context,
             val playerView = view.findViewById<PlayerView>(R.id.video_view)
             val playBtn = playerView.findViewById<ImageButton>(R.id.exo_pause)
             playerView.tag = "view$position"
+            val renderersFactory = NextRenderersFactory(context)
             val player = ExoPlayer.Builder(context)
+                .setRenderersFactory(renderersFactory)
                 .setLoadControl(DefaultLoadControl.Builder()
                     .setPrioritizeTimeOverSizeThresholds(false)
                     .build()

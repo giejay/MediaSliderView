@@ -10,5 +10,6 @@ enum class MetaDataType(val title: String, val defaultFontSize: Int) {
     DESCRIPTION("Description", 18),
     FILENAME("Filename", 18),
     FILEPATH("Filepath", 18),
-    MEDIA_COUNT("Media Count", 18)
+    MEDIA_COUNT("Media Count", 18),
+    PEOPLE("People", 18)
 }

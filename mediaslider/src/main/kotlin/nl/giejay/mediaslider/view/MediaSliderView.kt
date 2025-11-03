@@ -115,6 +115,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (context is MediaSliderListener && (context as MediaSliderListener).onButtonPressed(event)) {
                 return false
+            } else if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                Toast.makeText(context, "Volume Up", Toast.LENGTH_SHORT).show()
+                return super.dispatchKeyEvent(event)
             } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
                 if (itemType == SliderItemType.IMAGE) {
                     toggleSlideshow(true)
@@ -170,7 +173,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
             config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
             { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
+            },
             { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewRight.divider = null
@@ -183,7 +187,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
                 .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
             { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size) },
+                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
+            },
             { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewLeft.divider = null

@@ -10,6 +10,7 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import com.google.gson.JsonObject
 import com.zeuskartik.mediaslider.R
+import kotlinx.coroutines.runBlocking
 import nl.giejay.mediaslider.model.MetaDataType
 import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.util.MetaDataConverter
@@ -96,11 +97,15 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
     }
 
     override fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int) {
-        view.text = item.get(metaDataType)
+        runBlocking {
+            view.text = item.get(metaDataType)
+        }
     }
 
     override fun hasData(sliderItem: SliderItem): Boolean {
-        return sliderItem.get(metaDataType)?.isNotBlank() == true
+        return runBlocking {
+            sliderItem.get(metaDataType)?.isNotBlank() == true
+        }
     }
 
     override fun getTitle(): String {

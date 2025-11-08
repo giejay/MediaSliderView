@@ -100,14 +100,7 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
     }
 
     override fun updateView(view: TextView, value: String?) {
-        if(value?.isBlank() == true){
-            view.width = 0
-            view.height = 0
-            view.setPadding(0, 0, 0, 0)
-            view.text = ""
-        } else {
-            view.text = value
-        }
+        view.text = value
     }
 
     override fun getTitle(): String {
@@ -118,17 +111,17 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
 class MetaDataAdapter(val context: Context,
                       val items: List<MetaDataItem>,
                       private val portraitViewItems: List<MetaDataItem>,
-                      private val updateItem: (MetaDataItem, SliderItem, TextView) -> Unit,
                       private val getCurrentItem: () -> SliderItem,
                       private val portraitMode: () -> Boolean) : BaseAdapter() {
     private val layoutInflater: LayoutInflater = LayoutInflater.from(context)
     private val viewsPerType: MutableMap<MetaDataType, View> = mutableMapOf()
+    private val stateForItem = mutableMapOf<String, String?>()
 
     override fun getCount(): Int {
         return getItemsToShow().size
     }
 
-    private fun getItemsToShow(): List<MetaDataItem> = (if (portraitMode()) portraitViewItems else items)
+    fun getItemsToShow(): List<MetaDataItem> = (if (portraitMode()) portraitViewItems else items)
 
     override fun getItem(p0: Int): Any {
         return getItemsToShow()[p0]
@@ -147,6 +140,13 @@ class MetaDataAdapter(val context: Context,
     }
 
     override fun getView(p0: Int, p1: View?, p2: ViewGroup?): View {
+        val key = getCurrentItem().id + p0
+        val value = stateForItem[key]
+        if(value.isNullOrBlank()) {
+            return View(context).apply {
+                layoutParams = RelativeLayout.LayoutParams(0, 0)
+            }
+        }
         val item = getItem(p0) as MetaDataItem
         // can't use p1 because the list might differ for every photo/adapter
         val view = viewsPerType.getOrPut(item.type) { item.createView(layoutInflater) }
@@ -159,7 +159,15 @@ class MetaDataAdapter(val context: Context,
         }
         textView.textSize = item.fontSize.toFloat()
         textView.setPadding(textView.paddingLeft, item.padding, textView.paddingRight, item.padding)
-        updateItem.invoke(item, getCurrentItem(), textView)
+        item.updateView(textView, value)
         return view
+    }
+
+    fun updateState(sliderItemId: String, metaDataIndex: Int, value: String?) {
+        stateForItem[sliderItemId + metaDataIndex] = value
+    }
+
+    fun hasStateForItem(id: String, metaDataIndex: Int): Boolean {
+        return !stateForItem[id + metaDataIndex].isNullOrBlank()
     }
 }

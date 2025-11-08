@@ -16,6 +16,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -39,10 +40,11 @@ import kotlinx.coroutines.withContext
 import nl.giejay.mediaslider.adapter.AlignOption
 import nl.giejay.mediaslider.adapter.MetaDataAdapter
 import nl.giejay.mediaslider.adapter.MetaDataClock
+import nl.giejay.mediaslider.adapter.MetaDataItem
 import nl.giejay.mediaslider.adapter.MetaDataMediaCount
 import nl.giejay.mediaslider.adapter.ScreenSlidePagerAdapter
 import nl.giejay.mediaslider.config.MediaSliderConfiguration
-import nl.giejay.mediaslider.model.MetaDataType
+import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
 import nl.giejay.mediaslider.util.FixedSpeedScroller
@@ -189,12 +191,18 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         this.config = config
 
         val listViewRight = findViewById<ListView>(R.id.metadata_view_right)
+        val updateItem: (MetaDataItem, SliderItem, TextView) -> Unit = { metaData, sliderItem, textView ->
+            ioScope.launch {
+                val value = metaData.getValue(sliderItem, mPager.currentItem, config.items.size)
+                withContext(Dispatchers.Main) {
+                    metaData.updateView(textView, value)
+                }
+            }
+        }
         metaDataRightAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
             config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
-            { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
-            },
+            updateItem,
             { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewRight.divider = null
@@ -203,12 +211,10 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
         metaDataLeftAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.LEFT },
-            // dont show the clock/media count twice in portrait mode and force everything to be left aligned
+            // don't show the clock/media count twice in portrait mode and force everything to be left aligned
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
                 .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
-            { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
-            },
+            updateItem,
             { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewLeft.divider = null

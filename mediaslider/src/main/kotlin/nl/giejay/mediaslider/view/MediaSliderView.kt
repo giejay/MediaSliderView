@@ -2,7 +2,10 @@ package nl.giejay.mediaslider.view
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -53,6 +56,15 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     private var playButton: View
     private var mainHandler: Handler
     private var mPager: ViewPager
+    private val volumeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
+                if(currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.volume == 0f){
+                    currentPlayerView?.findViewById<ImageButton>(R.id.exo_mute)?.performClick()
+                }
+            }
+        }
+    }
 //    private var sliderMediaNumber: TextView
 //
 //    private var subtitleLeft: TextView
@@ -106,6 +118,17 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         mainHandler = Handler(Looper.getMainLooper())
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        context.registerReceiver(volumeReceiver, filter)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        context.unregisterReceiver(volumeReceiver)
+    }
+
     @OptIn(UnstableApi::class)
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (mPager.adapter == null) {
@@ -115,9 +138,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (context is MediaSliderListener && (context as MediaSliderListener).onButtonPressed(event)) {
                 return false
-            } else if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                Toast.makeText(context, "Volume Up", Toast.LENGTH_SHORT).show()
-                return super.dispatchKeyEvent(event)
             } else if ((event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY || event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
                 if (itemType == SliderItemType.IMAGE) {
                     toggleSlideshow(true)

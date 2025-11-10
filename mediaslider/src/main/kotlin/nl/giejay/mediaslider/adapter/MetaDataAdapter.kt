@@ -54,8 +54,8 @@ data class MetaDataClock(override val align: AlignOption,
         return layoutInflater.inflate(R.layout.metadata_item_clock, null)
     }
 
-    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String? {
-        return null
+    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String {
+        return "clock"
     }
 
     override fun updateView(view: TextView, value: String?) {

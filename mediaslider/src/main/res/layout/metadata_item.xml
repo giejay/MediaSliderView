@@ -13,6 +13,11 @@
         android:layout_alignParentRight="false"
         android:paddingRight="30dp"
         android:paddingLeft="30dp"
-        android:textColor="@color/details_text"
+        android:textColor="#FFFFFFFF"
+        android:shadowColor="#FF000000"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="6"
+        android:textStyle="bold"
         android:textSize="18sp" />
 </RelativeLayout>

@@ -25,13 +25,17 @@ class SliderItem : Parcelable {
     var id: String
     val url: String?
     val type: SliderItemType
+    val orientation: Int
     private val metaData: Map<MetaDataType, MetaDataProvider>
     val thumbnailUrl: String?
 
-    constructor(id: String, url: String?, type: SliderItemType, metaDataProviders: Map<MetaDataType, MetaDataProvider>, thumbnailUrl: String?) {
+    constructor(id: String, url: String?, type: SliderItemType,
+                orientation: Int,
+                metaDataProviders: Map<MetaDataType, MetaDataProvider>, thumbnailUrl: String?) {
         this.id = id
         this.url = url
         this.type = type
+        this.orientation = orientation
         this.metaData = metaDataProviders
         this.thumbnailUrl = thumbnailUrl
     }
@@ -40,6 +44,7 @@ class SliderItem : Parcelable {
         id = `in`.readString()!!
         url = `in`.readString()!!
         type = SliderItemType.valueOf(`in`.readString()!!)
+        orientation = `in`.readInt()
         val metaDataSize = `in`.readInt()
         val metaDataMap = mutableMapOf<MetaDataType, MetaDataProvider>()
         repeat(metaDataSize) {
@@ -61,6 +66,7 @@ class SliderItem : Parcelable {
         dest.writeString(id)
         dest.writeString(url)
         dest.writeString(type.toString())
+        dest.writeInt(orientation)
         dest.writeInt(metaData.size)
         for ((key, provider) in metaData) {
             dest.writeString(key.name)

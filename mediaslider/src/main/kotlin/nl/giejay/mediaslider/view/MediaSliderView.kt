@@ -59,7 +59,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     private val volumeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
-                if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.volume == 0f) {
+                if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.isPlaying == true &&  currentPlayerInScope?.volume == 0f) {
                     currentPlayerView?.findViewById<ImageButton>(R.id.exo_mute)?.performClick()
                 }
             }
@@ -285,14 +285,17 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     private fun initViewsAndSetAdapter(listener: Player.Listener) {
         pagerAdapter = ScreenSlidePagerAdapter(
-            context, config.items,
+            context,
+            config.items,
             defaultExoFactory,
             config,
+            {mPager.currentItem},
             { result, position -> transformResults[position] = result },
             {
                 when (it) {
                     R.id.exo_rewind -> goToPreviousAsset()
                     R.id.exo_forward -> goToNextAsset()
+                    R.id.exo_slideshow -> toggleSlideshow(true)
                 }
             }
         )

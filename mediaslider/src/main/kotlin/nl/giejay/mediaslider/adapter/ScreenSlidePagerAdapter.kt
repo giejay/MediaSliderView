@@ -19,22 +19,24 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.zeuskartik.mediaslider.R
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
+import nl.giejay.mediaslider.config.MediaSliderConfiguration
 import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
-import nl.giejay.mediaslider.view.TouchImageView
-import nl.giejay.mediaslider.config.MediaSliderConfiguration
 import nl.giejay.mediaslider.view.MediaSliderView.Companion.prepareMedia
+import nl.giejay.mediaslider.view.TouchImageView
 import timber.log.Timber
 
 class ScreenSlidePagerAdapter(private val context: Context,
                               private var items: List<SliderItemViewHolder>,
                               private val exoFactory: DefaultHttpDataSource.Factory,
                               private val config: MediaSliderConfiguration,
+                              private val currentIndex: () -> Int,
                               private val transformResult: (String, Int) -> Unit,
                               private val buttonListener: (Int) -> Unit) : PagerAdapter() {
     private var imageView: TouchImageView? = null
     private val progressBars: MutableMap<Int, ProgressBar> = HashMap()
+    private val failedPositions = mutableSetOf<String>()
 
     fun setItems(items: List<SliderItemViewHolder>) {
         this.items = items
@@ -68,7 +70,15 @@ class ScreenSlidePagerAdapter(private val context: Context,
                 loadImageIntoView(view, R.id.mBigImage, position, model.mainItem)
             }
         } else if (model.type == SliderItemType.VIDEO) {
-            view = inflater.inflate(R.layout.video_item, container, false)
+
+            // Use texture view for vertical videos OR if this position previously failed with SurfaceView
+            val useTextureView = model.mainItem.orientation != 1 || failedPositions.contains(model.url)
+            view = if (useTextureView) {
+                inflater.inflate(R.layout.video_item_texture_view, container, false)
+            } else {
+                inflater.inflate(R.layout.video_item, container, false)
+            }
+
             val playerView = view.findViewById<PlayerView>(R.id.video_view)
             val playBtn = playerView.findViewById<ImageButton>(R.id.exo_pause)
             playerView.tag = "view$position"
@@ -79,6 +89,30 @@ class ScreenSlidePagerAdapter(private val context: Context,
                     .setPrioritizeTimeOverSizeThresholds(false)
                     .build()
                 ).build()
+
+            // Add error listener for automatic retry with TextureView
+            player.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    val shouldRetry = !useTextureView && error is androidx.media3.exoplayer.ExoPlaybackException &&
+                            position == currentIndex() &&
+                            error.type == androidx.media3.exoplayer.ExoPlaybackException.TYPE_RENDERER &&
+                            !failedPositions.contains(model.url)
+                    Timber.e("Player error at position $position for url ${model.url}. Already failed: ${failedPositions.contains(model.url)}." +
+                            "Should retry: $shouldRetry. " +
+                            "Current index: ${currentIndex()}. " +
+                            "Did use texture view: ${useTextureView}. Error: ${error.message}")
+                    model.url?.let { failedPositions.add(it) }
+
+                    if (shouldRetry) {
+                        Timber.w("MediaCodec error at position $position, retrying with TextureView")
+                        // Release the current player to avoid memory leaks
+                        player.release()
+                        // Trigger recreation of this item
+                        notifyDataSetChanged()
+                    }
+                }
+            })
+
             model.url?.let { prepareMedia(it, player, exoFactory) }
             if (!config.isVideoSoundEnable) {
                 player.volume = 0f
@@ -117,6 +151,9 @@ class ScreenSlidePagerAdapter(private val context: Context,
             }
             playerView.findViewById<ImageButton>(R.id.exo_rewind).setOnClickListener { _ ->
                 buttonListener.invoke(R.id.exo_rewind)
+            }
+            playerView.findViewById<ImageButton>(R.id.exo_slideshow).setOnClickListener { _ ->
+                buttonListener.invoke(R.id.exo_slideshow)
             }
         }
         container.addView(view)

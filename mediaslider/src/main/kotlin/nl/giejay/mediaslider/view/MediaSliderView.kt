@@ -42,7 +42,7 @@ import nl.giejay.mediaslider.adapter.MetaDataClock
 import nl.giejay.mediaslider.adapter.MetaDataMediaCount
 import nl.giejay.mediaslider.adapter.ScreenSlidePagerAdapter
 import nl.giejay.mediaslider.config.MediaSliderConfiguration
-import nl.giejay.mediaslider.model.MetaDataType
+import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
 import nl.giejay.mediaslider.util.FixedSpeedScroller
@@ -59,7 +59,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     private val volumeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
-                if(currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.volume == 0f){
+                if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.volume == 0f) {
                     currentPlayerView?.findViewById<ImageButton>(R.id.exo_mute)?.performClick()
                 }
             }
@@ -192,9 +192,6 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         metaDataRightAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.RIGHT },
             config.metaDataConfig.map { it.withAlign(align = AlignOption.RIGHT) }.distinct(),
-            { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
-            },
             { if (currentItem().hasSecondaryItem()) currentItem().secondaryItem!! else currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewRight.divider = null
@@ -203,12 +200,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
         metaDataLeftAdapter = MetaDataAdapter(context,
             config.metaDataConfig.filter { it.align == AlignOption.LEFT },
-            // dont show the clock/media count twice in portrait mode and force everything to be left aligned
+            // don't show the clock/media count twice in portrait mode and force everything to be left aligned
             config.metaDataConfig.filterNot { it is MetaDataClock || it is MetaDataMediaCount }
                 .map { it.withAlign(align = AlignOption.LEFT) }.distinct(),
-            { metaData, sliderItem, textView ->
-                metaData.updateView(textView, sliderItem, mPager.currentItem, config.items.size)
-            },
             { currentItem().mainItem },
             { currentItem().hasSecondaryItem() })
         listViewLeft.divider = null
@@ -318,20 +312,23 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         mPager.setAdapter(pagerAdapter)
         setStartPosition()
         mPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
-            override fun onPageScrolled(i: Int, v: Float, i1: Int) {
+            override fun onPageScrolled(sliderItemIndex: Int, v: Float, i1: Int) {
                 stopPlayer()
-                if (i != mPager.currentItem) {
+                if (sliderItemIndex != mPager.currentItem) {
                     return
                 }
-                val sliderItem = config.items[i]
+                val sliderItem = config.items[sliderItemIndex]
+                val mainItem = sliderItem.mainItem
+
+                updateMetaData(metaDataLeftAdapter, mainItem, sliderItemIndex)
+                updateMetaData(metaDataRightAdapter, if (sliderItem.hasSecondaryItem()) sliderItem.secondaryItem!! else mainItem, sliderItemIndex)
+
                 config.onAssetSelected(sliderItem)
-                metaDataRightAdapter.notifyDataSetChanged()
-                metaDataLeftAdapter.notifyDataSetChanged()
                 currentToast?.cancel()
-                if (!sliderItem.hasSecondaryItem() && config.debugEnabled && transformResults.contains(i)) {
-                    currentToast = Toast.makeText(context, transformResults[i], Toast.LENGTH_LONG)
+                if (!sliderItem.hasSecondaryItem() && config.debugEnabled && transformResults.contains(sliderItemIndex)) {
+                    currentToast = Toast.makeText(context, transformResults[sliderItemIndex], Toast.LENGTH_LONG)
                     currentToast!!.show()
-                    transformResults.remove(i)
+                    transformResults.remove(sliderItemIndex)
                 }
 
                 if (config.loadMore != null && mPager.currentItem > config.items.size - 10 && !loading) {
@@ -349,7 +346,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                     if (config.isGradiantOverlayVisible) {
                         statusLayoutLeft.background = null
                     }
-                    val viewTag = mPager.findViewWithTag<View>("view$i") ?: return
+                    val viewTag = mPager.findViewWithTag<View>("view$sliderItemIndex") ?: return
                     currentPlayerView = viewTag.findViewById(R.id.video_view)
                     if (currentPlayerView!!.player != null) {
                         currentPlayerInScope = currentPlayerView!!.player as ExoPlayer?
@@ -372,6 +369,22 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         startTimerNextAsset()
                     }
                     stopPlayer()
+                }
+            }
+
+            private fun updateMetaData(adapter: MetaDataAdapter, sliderItem: SliderItem, sliderItemIndex: Int) {
+                adapter.getItemsToShow().forEachIndexed { metaDataIndex, item ->
+                    if(adapter.hasStateForItem(sliderItem.id, metaDataIndex)) {
+                        // already have state for this item, no need to fetch again
+                        return@forEachIndexed
+                    }
+                    ioScope.launch {
+                        val value = item.getValue(sliderItem, sliderItemIndex, config.items.size)
+                        adapter.updateState(sliderItem.id, metaDataIndex, value)
+                        withContext(Dispatchers.Main) {
+                            adapter.notifyDataSetChanged()
+                        }
+                    }
                 }
             }
 

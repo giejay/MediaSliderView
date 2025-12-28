@@ -24,8 +24,8 @@ sealed class MetaDataItem(val type: MetaDataType) {
     abstract val fontSize: Int
     abstract val padding: Int
     abstract fun createView(layoutInflater: LayoutInflater): View
-    abstract fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int)
-    abstract fun hasData(sliderItem: SliderItem): Boolean
+    abstract suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String?
+    abstract fun updateView(view: TextView, value: String?)
     fun withAlign(align: AlignOption): MetaDataItem {
         return create(type, align, padding, fontSize)
     }
@@ -54,12 +54,12 @@ data class MetaDataClock(override val align: AlignOption,
         return layoutInflater.inflate(R.layout.metadata_item_clock, null)
     }
 
-    override fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int) {
-        // no-op
+    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String {
+        return "clock"
     }
 
-    override fun hasData(sliderItem: SliderItem): Boolean {
-        return true
+    override fun updateView(view: TextView, value: String?) {
+        // no-op
     }
 
     override fun getTitle(): String {
@@ -74,12 +74,12 @@ data class MetaDataMediaCount(override val align: AlignOption,
         return layoutInflater.inflate(R.layout.metadata_item, null)
     }
 
-    override fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int) {
-        view.text = "${index + 1}/$totalCount"
+    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String {
+        return "${index + 1}/$totalCount"
     }
 
-    override fun hasData(sliderItem: SliderItem): Boolean {
-        return true
+    override fun updateView(view: TextView, value: String?) {
+        view.text = value
     }
 
     override fun getTitle(): String {
@@ -95,12 +95,12 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
         return layoutInflater.inflate(R.layout.metadata_item, null)
     }
 
-    override fun updateView(view: TextView, item: SliderItem, index: Int, totalCount: Int) {
-        view.text = item.get(metaDataType)
+    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String? {
+        return item.get(metaDataType)
     }
 
-    override fun hasData(sliderItem: SliderItem): Boolean {
-        return sliderItem.get(metaDataType)?.isNotBlank() == true
+    override fun updateView(view: TextView, value: String?) {
+        view.text = value
     }
 
     override fun getTitle(): String {
@@ -111,26 +111,24 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
 class MetaDataAdapter(val context: Context,
                       val items: List<MetaDataItem>,
                       private val portraitViewItems: List<MetaDataItem>,
-                      private val updateItem: (MetaDataItem, SliderItem, TextView) -> Unit,
                       private val getCurrentItem: () -> SliderItem,
                       private val portraitMode: () -> Boolean) : BaseAdapter() {
     private val layoutInflater: LayoutInflater = LayoutInflater.from(context)
     private val viewsPerType: MutableMap<MetaDataType, View> = mutableMapOf()
+    private val stateForItem = mutableMapOf<String, String?>()
 
     override fun getCount(): Int {
-        return getFilteredMetaData().size
+        return getItemsToShow().size
     }
 
-    private fun getFilteredMetaData() = (if (portraitMode()) portraitViewItems else items).filter {
-        it.hasData(getCurrentItem())
-    }
+    fun getItemsToShow(): List<MetaDataItem> = (if (portraitMode()) portraitViewItems else items)
 
     override fun getItem(p0: Int): Any {
-        return getFilteredMetaData()[p0]
+        return getItemsToShow()[p0]
     }
 
     override fun getItemId(p0: Int): Long {
-        return getFilteredMetaData()[p0].type.ordinal.toLong()
+        return getItemsToShow()[p0].type.ordinal.toLong()
     }
 
     override fun isEnabled(position: Int): Boolean {
@@ -142,6 +140,13 @@ class MetaDataAdapter(val context: Context,
     }
 
     override fun getView(p0: Int, p1: View?, p2: ViewGroup?): View {
+        val key = getCurrentItem().id + p0
+        val value = stateForItem[key]
+        if(value.isNullOrBlank()) {
+            return View(context).apply {
+                layoutParams = RelativeLayout.LayoutParams(0, 0)
+            }
+        }
         val item = getItem(p0) as MetaDataItem
         // can't use p1 because the list might differ for every photo/adapter
         val view = viewsPerType.getOrPut(item.type) { item.createView(layoutInflater) }
@@ -154,7 +159,15 @@ class MetaDataAdapter(val context: Context,
         }
         textView.textSize = item.fontSize.toFloat()
         textView.setPadding(textView.paddingLeft, item.padding, textView.paddingRight, item.padding)
-        updateItem.invoke(item, getCurrentItem(), textView)
+        item.updateView(textView, value)
         return view
+    }
+
+    fun updateState(sliderItemId: String, metaDataIndex: Int, value: String?) {
+        stateForItem[sliderItemId + metaDataIndex] = value
+    }
+
+    fun hasStateForItem(id: String, metaDataIndex: Int): Boolean {
+        return !stateForItem[id + metaDataIndex].isNullOrBlank()
     }
 }

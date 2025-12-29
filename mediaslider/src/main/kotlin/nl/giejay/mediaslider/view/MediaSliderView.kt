@@ -59,23 +59,12 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
     private val volumeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
-                if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.isPlaying == true &&  currentPlayerInScope?.volume == 0f) {
+                if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.isPlaying == true && currentPlayerInScope?.volume == 0f) {
                     currentPlayerView?.findViewById<ImageButton>(R.id.exo_mute)?.performClick()
                 }
             }
         }
     }
-//    private var sliderMediaNumber: TextView
-//
-//    private var subtitleLeft: TextView
-//    private var subtitleRight: TextView
-//    private var dateLeft: TextView
-//    private var dateRight: TextView
-//    private var titleLeft: TextView
-//    private var titleRight: TextView
-//    private var textViewDescriptions: List<TextView>
-//
-//    private var clock: TextView
 
     // config
     private lateinit var config: MediaSliderConfiguration
@@ -96,24 +85,9 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
 
     init {
         inflate(getContext(), R.layout.slider, this)
-//        val listViewLeft = findViewById<ListView>(R.id.metadata_view_left)
-//        listViewLeft.divider = null
-//        listViewLeft.adapter = MetaDataAdapter(context, config, listOf(MetaDataItem("test!", R.layout.metadata_item_left), MetaDataItem("test 2!", R.layout.metadata_item_left)))
 
         playButton = findViewById(R.id.playPause)
         playButton.setOnClickListener { toggleSlideshow(true) }
-//        clock = findViewById(R.id.clock)
-//        titleRight = findViewById(R.id.title_right)
-//        titleLeft = findViewById(R.id.title_left)
-//        subtitleRight = findViewById(R.id.subtitle_right)
-//        subtitleLeft = findViewById(R.id.subtitle_left)
-//        dateRight = findViewById(R.id.date_right)
-//        dateLeft = findViewById(R.id.date_left)
-//        textViewDescriptions = listOf(titleRight, titleLeft, dateRight, dateLeft, subtitleRight, subtitleLeft)
-
-//        sliderMediaNumber = findViewById(R.id.number)
-//        val left = findViewById<ImageView>(R.id.left_arrow)
-//        val right = findViewById<ImageView>(R.id.right_arrow)
         mPager = findViewById(R.id.pager)
         mainHandler = Handler(Looper.getMainLooper())
     }
@@ -148,6 +122,15 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && itemType == SliderItemType.VIDEO && currentPlayerView != null) {
                 currentPlayerView!!.useController = true
                 currentPlayerView!!.showController()
+
+                // Ensure proper focus to fix highlighting issue on first open
+                currentPlayerView!!.post {
+                    val progressView = currentPlayerView!!.findViewById<View>(R.id.exo_progress_layout)
+                    progressView?.requestFocus()
+                    // Force a refresh of the focus state
+                    progressView?.invalidate()
+                }
+
                 return super.dispatchKeyEvent(event)
             } else if (event.keyCode == KeyEvent.KEYCODE_BACK && itemType == SliderItemType.VIDEO && currentPlayerView != null && currentPlayerView!!.isControllerFullyVisible) {
                 currentPlayerView!!.hideController()
@@ -208,7 +191,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         listViewLeft.divider = null
         listViewLeft.adapter = metaDataLeftAdapter
 
-        val listener: Player.Listener = object : Player.Listener {
+        val listener: ExoPlayerListener = object : ExoPlayerListener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED && slideShowPlaying) {
                     goToNextAsset()
@@ -283,13 +266,12 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         }
     }
 
-    private fun initViewsAndSetAdapter(listener: Player.Listener) {
+    private fun initViewsAndSetAdapter(listener: ExoPlayerListener) {
         pagerAdapter = ScreenSlidePagerAdapter(
             context,
             config.items,
-            defaultExoFactory,
             config,
-            {mPager.currentItem},
+            { mPager.currentItem },
             { result, position -> transformResults[position] = result },
             {
                 when (it) {
@@ -297,7 +279,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                     R.id.exo_forward -> goToNextAsset()
                     R.id.exo_slideshow -> toggleSlideshow(true)
                 }
-            }
+            },
+            listener
         )
 
         try {
@@ -316,43 +299,48 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         setStartPosition()
         mPager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
             override fun onPageScrolled(sliderItemIndex: Int, v: Float, i1: Int) {
-                stopPlayer()
-                if (sliderItemIndex != mPager.currentItem) {
-                    return
-                }
-                val sliderItem = config.items[sliderItemIndex]
-                val mainItem = sliderItem.mainItem
-
-                updateMetaData(metaDataLeftAdapter, mainItem, sliderItemIndex)
-                updateMetaData(metaDataRightAdapter, if (sliderItem.hasSecondaryItem()) sliderItem.secondaryItem!! else mainItem, sliderItemIndex)
-
-                config.onAssetSelected(sliderItem)
-                currentToast?.cancel()
-                if (!sliderItem.hasSecondaryItem() && config.debugEnabled && transformResults.contains(sliderItemIndex)) {
-                    currentToast = Toast.makeText(context, transformResults[sliderItemIndex], Toast.LENGTH_LONG)
-                    currentToast!!.show()
-                    transformResults.remove(sliderItemIndex)
-                }
-
                 if (config.loadMore != null && mPager.currentItem > config.items.size - 10 && !loading) {
+                    // do not load more in the "background" because "addItemsMain" will invoke the onPageScrolled again and reload the current item
                     loading = true
 
                     ioScope.launch {
                         val nextItems = config.loadMore!!.invoke()
                         addItemsMain(nextItems)
+                        // keep loading until no more items are received, so set it to false if there are items
                         loading = nextItems.isEmpty()
                     }
-                }
-
-                val statusLayoutLeft = findViewById<LinearLayout>(R.id.meta_data_holder)
-                if (sliderItem.type == SliderItemType.VIDEO) {
-                    if (config.isGradiantOverlayVisible) {
-                        statusLayoutLeft.background = null
+                } else {
+                    stopPlayer()
+                    if (sliderItemIndex != mPager.currentItem) {
+                        return
                     }
-                    val viewTag = mPager.findViewWithTag<View>("view$sliderItemIndex") ?: return
-                    currentPlayerView = viewTag.findViewById(R.id.video_view)
-                    if (currentPlayerView!!.player != null) {
-                        currentPlayerInScope = currentPlayerView!!.player as ExoPlayer?
+                    val sliderItem = config.items[sliderItemIndex]
+                    val mainItem = sliderItem.mainItem
+
+                    updateMetaData(metaDataLeftAdapter, mainItem, sliderItemIndex)
+                    updateMetaData(metaDataRightAdapter, if (sliderItem.hasSecondaryItem()) sliderItem.secondaryItem!! else mainItem, sliderItemIndex)
+
+                    config.onAssetSelected(sliderItem)
+                    currentToast?.cancel()
+                    if (!sliderItem.hasSecondaryItem() && config.debugEnabled && transformResults.contains(sliderItemIndex)) {
+                        currentToast = Toast.makeText(context, transformResults[sliderItemIndex], Toast.LENGTH_LONG)
+                        currentToast!!.show()
+                        transformResults.remove(sliderItemIndex)
+                    }
+
+                    val statusLayoutLeft = findViewById<LinearLayout>(R.id.meta_data_holder)
+                    if (sliderItem.type == SliderItemType.VIDEO) {
+                        if (config.isGradiantOverlayVisible) {
+                            statusLayoutLeft.background = null
+                        }
+                        val viewTag = mPager.findViewWithTag<ExoPlayerView>("view$sliderItemIndex") ?: return
+                        if(!viewTag.isReady()){
+                            Timber.e("Player is not initialized properly, cannot play video.")
+                            Toast.makeText(context, "Player is not initialized properly, cannot play video.", Toast.LENGTH_LONG).show()
+                            return
+                        }
+                        currentPlayerView = viewTag.getPlayerView()
+                        currentPlayerInScope = viewTag.getPlayer()
                         currentPlayerInScope!!.seekTo(0, 0)
                         if (currentPlayerInScope!!.playbackState == Player.STATE_IDLE && sliderItem.url != null) {
                             prepareMedia(sliderItem.url!!,
@@ -361,23 +349,22 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         if (!config.isVideoSoundEnable) {
                             currentPlayerView!!.player!!.volume = 0f
                         }
-                        currentPlayerInScope!!.addListener(listener)
                         currentPlayerInScope!!.playWhenReady = true
+                    } else {
+                        if (config.isGradiantOverlayVisible) {
+                            statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
+                        }
+                        if (slideShowPlaying) {
+                            startTimerNextAsset()
+                        }
+                        stopPlayer()
                     }
-                } else {
-                    if (config.isGradiantOverlayVisible) {
-                        statusLayoutLeft.setBackgroundResource(R.drawable.gradient_overlay)
-                    }
-                    if (slideShowPlaying) {
-                        startTimerNextAsset()
-                    }
-                    stopPlayer()
                 }
             }
 
             private fun updateMetaData(adapter: MetaDataAdapter, sliderItem: SliderItem, sliderItemIndex: Int) {
                 adapter.getItemsToShow().forEachIndexed { metaDataIndex, item ->
-                    if(adapter.hasStateForItem(sliderItem.id, metaDataIndex)) {
+                    if (adapter.hasStateForItem(sliderItem.id, metaDataIndex)) {
                         // already have state for this item, no need to fetch again
                         return@forEachIndexed
                     }

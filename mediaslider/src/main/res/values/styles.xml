@@ -10,6 +10,18 @@
         <item name="colorAccent">@color/progressbarColor</item>
     </style>
 
+    <!-- TV-specific button style with proper focus -->
+    <style name="TVMediaButton">
+        <item name="android:layout_width">60dp</item>
+        <item name="android:layout_height">60dp</item>
+        <item name="android:background">@drawable/tv_button_background</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">false</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:layout_margin">4dp</item>
+    </style>
+
 <!--    <style name="ExoMediaButton.Previous">-->
 <!--        <item name="android:visibility">gone</item>-->
 <!--    </style>-->

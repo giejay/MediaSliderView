@@ -7,11 +7,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ProgressBar
-import androidx.media3.datasource.DefaultHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.ExoPlayer
+import android.widget.Toast
 import androidx.media3.ui.PlayerView
 import androidx.viewpager.widget.PagerAdapter
 import com.bumptech.glide.Glide
@@ -23,17 +20,18 @@ import nl.giejay.mediaslider.config.MediaSliderConfiguration
 import nl.giejay.mediaslider.model.SliderItem
 import nl.giejay.mediaslider.model.SliderItemType
 import nl.giejay.mediaslider.model.SliderItemViewHolder
-import nl.giejay.mediaslider.view.MediaSliderView.Companion.prepareMedia
+import nl.giejay.mediaslider.view.ExoPlayerListener
+import nl.giejay.mediaslider.view.ExoPlayerView
 import nl.giejay.mediaslider.view.TouchImageView
 import timber.log.Timber
 
 class ScreenSlidePagerAdapter(private val context: Context,
                               private var items: List<SliderItemViewHolder>,
-                              private val exoFactory: DefaultHttpDataSource.Factory,
                               private val config: MediaSliderConfiguration,
                               private val currentIndex: () -> Int,
                               private val transformResult: (String, Int) -> Unit,
-                              private val buttonListener: (Int) -> Unit) : PagerAdapter() {
+                              private val buttonListener: (Int) -> Unit,
+                              private val exoPlayerListener: ExoPlayerListener) : PagerAdapter() {
     private var imageView: TouchImageView? = null
     private val progressBars: MutableMap<Int, ProgressBar> = HashMap()
     private val failedPositions = mutableSetOf<String>()
@@ -70,90 +68,30 @@ class ScreenSlidePagerAdapter(private val context: Context,
                 loadImageIntoView(view, R.id.mBigImage, position, model.mainItem)
             }
         } else if (model.type == SliderItemType.VIDEO) {
-
             // Use texture view for vertical videos OR if this position previously failed with SurfaceView
             val useTextureView = model.mainItem.orientation != 1 || failedPositions.contains(model.url)
-            view = if (useTextureView) {
-                inflater.inflate(R.layout.video_item_texture_view, container, false)
-            } else {
-                inflater.inflate(R.layout.video_item, container, false)
-            }
-
-            val playerView = view.findViewById<PlayerView>(R.id.video_view)
-            val playBtn = playerView.findViewById<ImageButton>(R.id.exo_pause)
-            playerView.tag = "view$position"
-            val renderersFactory = NextRenderersFactory(context)
-            val player = ExoPlayer.Builder(context)
-                .setRenderersFactory(renderersFactory)
-                .setLoadControl(DefaultLoadControl.Builder()
-                    .setPrioritizeTimeOverSizeThresholds(false)
-                    .build()
-                ).build()
-
-            // Add error listener for automatic retry with TextureView
-            player.addListener(object : androidx.media3.common.Player.Listener {
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    val shouldRetry = !useTextureView && error is androidx.media3.exoplayer.ExoPlaybackException &&
-                            position == currentIndex() &&
-                            error.type == androidx.media3.exoplayer.ExoPlaybackException.TYPE_RENDERER &&
-                            !failedPositions.contains(model.url)
-                    Timber.e("Player error at position $position for url ${model.url}. Already failed: ${failedPositions.contains(model.url)}." +
+            view = ExoPlayerView(context, if (useTextureView) R.layout.video_item_texture_view else R.layout.video_item)
+            view.tag = "view$position"
+            view.setupPlayer(config, NextRenderersFactory(context), exoPlayerListener, buttonListener) { player, error ->
+                val shouldRetry = !useTextureView && !failedPositions.contains(model.url)
+                Timber.e(error,
+                    "Player error at position $position for url ${model.url}. Already failed: ${failedPositions.contains(model.url)}." +
                             "Should retry: $shouldRetry. " +
                             "Current index: ${currentIndex()}. " +
                             "Did use texture view: ${useTextureView}. Error: ${error.message}")
+
+                if (shouldRetry) {
                     model.url?.let { failedPositions.add(it) }
-
-                    if (shouldRetry) {
-                        Timber.w("MediaCodec error at position $position, retrying with TextureView")
-                        // Release the current player to avoid memory leaks
-                        player.release()
-                        // Trigger recreation of this item
-                        notifyDataSetChanged()
-                    }
-                }
-            })
-
-            model.url?.let { prepareMedia(it, player, exoFactory) }
-            if (!config.isVideoSoundEnable) {
-                player.volume = 0f
-            }
-
-            player.playWhenReady = false
-            playerView.player = player
-            playBtn.setOnClickListener { v: View? ->
-                buttonListener.invoke(R.id.exo_pause)
-                //events on play buttons
-                if (player.isPlaying) {
-                    player.pause()
+                    Timber.w("MediaCodec error at position $position, retrying with TextureView")
+                    // Release the current player to avoid memory leaks
+                    player.release()
+                    // Trigger recreation of this item
+                    notifyDataSetChanged()
+                    true
                 } else {
-                    if (player.currentPosition >= player.contentDuration) {
-                        player.seekToDefaultPosition()
-                    }
-                    player.play()
+                    Toast.makeText(context, "Cannot play video: ${error.message}", Toast.LENGTH_LONG).show()
+                    false
                 }
-            }
-
-            val muteButton = playerView.findViewById<ImageButton>(R.id.exo_mute)
-            muteButton.setImageResource(if (player.volume > 0f) R.drawable.unmute_icon else R.drawable.mute_icon)
-            muteButton.setOnClickListener { _: View? ->
-                if (player.volume == 0f) {
-                    player.volume = 1f
-                    muteButton.setImageResource(R.drawable.unmute_icon)
-                    config.isVideoSoundEnable = true
-                } else {
-                    player.volume = 0f
-                    muteButton.setImageResource(R.drawable.mute_icon)
-                    config.isVideoSoundEnable = false
-                }
-            }
-            playerView.findViewById<ImageButton>(R.id.exo_forward).setOnClickListener { _ ->
-                buttonListener.invoke(R.id.exo_forward)
-            }
-            playerView.findViewById<ImageButton>(R.id.exo_rewind).setOnClickListener { _ ->
-                buttonListener.invoke(R.id.exo_rewind)
-            }
-            playerView.findViewById<ImageButton>(R.id.exo_slideshow).setOnClickListener { _ ->
-                buttonListener.invoke(R.id.exo_slideshow)
             }
         }
         container.addView(view)
@@ -209,9 +147,8 @@ class ScreenSlidePagerAdapter(private val context: Context,
 
     override fun destroyItem(container: ViewGroup, position: Int, `object`: Any) {
         val view = `object` as View
-        val exoplayer = view.findViewById<PlayerView>(R.id.video_view)
-        if (exoplayer != null && exoplayer.player != null) {
-            exoplayer.player!!.release()
+        if (view is ExoPlayerView) {
+            view.releasePlayer()
         } else {
             val imageView = view.findViewById<View>(R.id.mBigImage)
             if (imageView != null) {

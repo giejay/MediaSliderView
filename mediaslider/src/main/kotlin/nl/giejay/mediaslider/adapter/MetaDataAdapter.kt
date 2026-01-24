@@ -24,13 +24,13 @@ sealed class MetaDataItem(val type: MetaDataType) {
     abstract val fontSize: Int
     abstract val padding: Int
     abstract fun createView(layoutInflater: LayoutInflater): View
-    abstract suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String?
+    abstract suspend fun getValue(context: Context, item: SliderItem, index: Int, totalCount: Int): String?
     abstract fun updateView(view: TextView, value: String?)
     fun withAlign(align: AlignOption): MetaDataItem {
         return create(type, align, padding, fontSize)
     }
 
-    abstract fun getTitle(): String
+    abstract fun getTitle(context: Context): String
 
     companion object {
         const val DEFAULT_PADDING = 0
@@ -54,16 +54,16 @@ data class MetaDataClock(override val align: AlignOption,
         return layoutInflater.inflate(R.layout.metadata_item_clock, null)
     }
 
-    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String {
-        return "clock"
+    override suspend fun getValue(context: Context, item: SliderItem, index: Int, totalCount: Int): String {
+        return context.getString(R.string.clock)
     }
 
     override fun updateView(view: TextView, value: String?) {
         // no-op
     }
 
-    override fun getTitle(): String {
-        return "Clock"
+    override fun getTitle(context: Context): String {
+        return context.getString(R.string.clock)
     }
 }
 
@@ -74,7 +74,7 @@ data class MetaDataMediaCount(override val align: AlignOption,
         return layoutInflater.inflate(R.layout.metadata_item, null)
     }
 
-    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String {
+    override suspend fun getValue(context: Context, item: SliderItem, index: Int, totalCount: Int): String {
         return "${index + 1}/$totalCount"
     }
 
@@ -82,8 +82,8 @@ data class MetaDataMediaCount(override val align: AlignOption,
         view.text = value
     }
 
-    override fun getTitle(): String {
-        return "Media Count"
+    override fun getTitle(context: Context): String {
+        return context.getString(R.string.media_count)
     }
 }
 
@@ -95,7 +95,7 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
         return layoutInflater.inflate(R.layout.metadata_item, null)
     }
 
-    override suspend fun getValue(item: SliderItem, index: Int, totalCount: Int): String? {
+    override suspend fun getValue(context: Context, item: SliderItem, index: Int, totalCount: Int): String? {
         return item.get(metaDataType)
     }
 
@@ -103,8 +103,8 @@ data class MetaDataSliderItem(val metaDataType: MetaDataType, override val align
         view.text = value
     }
 
-    override fun getTitle(): String {
-        return metaDataType.title
+    override fun getTitle(context: Context): String {
+        return metaDataType.getTitle(context)
     }
 }
 
@@ -159,7 +159,10 @@ class MetaDataAdapter(val context: Context,
         }
         textView.textSize = item.fontSize.toFloat()
         textView.setPadding(textView.paddingLeft, item.padding, textView.paddingRight, item.padding)
-        item.updateView(textView, value)
+
+        val title = item.getTitle(context)
+        item.updateView(textView, title)
+
         return view
     }
 

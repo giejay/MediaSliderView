@@ -9,7 +9,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -202,24 +201,11 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 val playPauseButton = findViewById<ImageButton>(R.id.exo_pause)
                 playPauseButton?.setImageResource(if (isPlaying) R.drawable.exo_legacy_controls_pause else R.drawable.exo_legacy_controls_play)
-
-                // Handle screen wake lock for video playback
-                if (currentItemType() == SliderItemType.VIDEO) {
-                    if (isPlaying) {
-                        setKeepScreenOnFlags()
-                    } else {
-                        clearKeepScreenOnFlags()
-                    }
-                }
             }
 
             override fun onPlayerError(error: PlaybackException) {
                 if (slideShowPlaying) {
                     goToNextAsset()
-                }
-                // Clear screen wake lock on error
-                if (currentItemType() == SliderItemType.VIDEO) {
-                    clearKeepScreenOnFlags()
                 }
             }
         }
@@ -246,7 +232,10 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             if (currentItemType() == SliderItemType.IMAGE) {
                 startTimerNextAsset()
             }
-            setKeepScreenOnFlags();
+            if (context is Activity) {
+                // view is being triggered from main app, prevent app going to sleep
+                (context as Activity).window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
         } else {
             clearKeepScreenOnFlags()
             mainHandler.removeCallbacks(goToNextAssetRunnable)
@@ -380,7 +369,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         return@forEachIndexed
                     }
                     ioScope.launch {
-                        val value = item.getValue(sliderItem, sliderItemIndex, config.items.size)
+                        val value = item.getValue(context, sliderItem, sliderItemIndex, config.items.size)
                         adapter.updateState(sliderItem.id, metaDataIndex, value)
                         withContext(Dispatchers.Main) {
                             adapter.notifyDataSetChanged()
@@ -412,26 +401,12 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
             // view is being triggered from main app, remove the flags to keep screen on
             val window = (context as Activity).window
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            Log.d("MediaSliderView", "clear FLAG_KEEP_SCREEN_ON")
-        }
-    }
-
-    private fun setKeepScreenOnFlags() {
-        if (context is Activity) {
-            // view is being triggered from main app, prevent app going to sleep
-            val window = (context as Activity).window
-            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            Log.d("MediaSliderView", "set FLAG_KEEP_SCREEN_ON")
         }
     }
 
     private fun stopPlayer() {
         if (currentPlayerInScope != null && (currentPlayerInScope!!.isPlaying || currentPlayerInScope!!.isLoading)) {
             currentPlayerInScope!!.stop()
-        }
-        // Clear screen wake lock when stopping player
-        if (currentItemType() == SliderItemType.VIDEO) {
-            clearKeepScreenOnFlags()
         }
     }
 

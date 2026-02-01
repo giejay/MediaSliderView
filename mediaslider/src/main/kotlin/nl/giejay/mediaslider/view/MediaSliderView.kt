@@ -217,11 +217,11 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 if (slideShowPlaying) {
                     goToNextAsset()
                 }
-            }
-            // Clear screen wake lock on error
+                // Clear screen wake lock on error
                 if (currentItemType() == SliderItemType.VIDEO) {
                     clearKeepScreenOnFlags()
                 }
+            }
         }
         initViewsAndSetAdapter(listener)
     }

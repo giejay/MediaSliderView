@@ -380,7 +380,7 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                         return@forEachIndexed
                     }
                     ioScope.launch {
-                        val value = item.getValue(sliderItem, sliderItemIndex, config.items.size)
+                        val value = item.getValue(context, sliderItem, sliderItemIndex, config.items.size)
                         adapter.updateState(sliderItem.id, metaDataIndex, value)
                         withContext(Dispatchers.Main) {
                             adapter.notifyDataSetChanged()

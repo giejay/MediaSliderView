@@ -159,10 +159,7 @@ class MetaDataAdapter(val context: Context,
         }
         textView.textSize = item.fontSize.toFloat()
         textView.setPadding(textView.paddingLeft, item.padding, textView.paddingRight, item.padding)
-
-        val title = item.getTitle(context)
-        item.updateView(textView, title)
-
+        item.updateView(textView, value)
         return view
     }
 

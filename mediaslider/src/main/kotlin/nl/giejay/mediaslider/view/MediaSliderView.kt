@@ -61,6 +61,8 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == "android.media.VOLUME_CHANGED_ACTION") {
                 if (currentItemType() == SliderItemType.VIDEO && currentPlayerInScope?.isPlaying == true && currentPlayerInScope?.volume == 0f) {
+                    Timber.i("Volume changed detected, unmuting video")
+                    Toast.makeText(context, "Volume changed detected, unmuting video", Toast.LENGTH_SHORT).show()
                     currentPlayerView?.findViewById<ImageButton>(R.id.exo_mute)?.performClick()
                 }
             }

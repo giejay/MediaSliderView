@@ -139,14 +139,18 @@ class MediaSliderView(context: Context) : ConstraintLayout(context) {
                 currentPlayerView!!.hideController()
                 return true
             } else if (slideShowPlaying && itemType == SliderItemType.IMAGE) {
-                if (event.keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    toggleSlideshow(true)
-                } else {
-                    // remove all current callbacks to prevent multiple runnables
-                    mainHandler.removeCallbacks(goToNextAssetRunnable)
+                // Manual stepping while the slideshow timer runs: step one image back or
+                // forward and restart the countdown, so navigating does not stop the show.
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                     goToNextAsset()
+                    startTimerNextAsset()
+                    return false
+                } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    goToPreviousAsset()
+                    startTimerNextAsset()
                     return false
                 }
+                toggleSlideshow(true)
                 return super.dispatchKeyEvent(event)
             } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if (itemType == SliderItemType.IMAGE || currentPlayerView?.isControllerFullyVisible == false) {
